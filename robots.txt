@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://52south.github.io/52south/sitemap.xml
