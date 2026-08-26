@@ -29,25 +29,15 @@ if(todayGrid){
   if(todayCards[0])todayCards[0].classList.add('today-lunch-card');
   if(todayCards[1])todayCards[1].classList.add('today-special-card');
   if(!document.querySelector('.today-swipe-hint')){
-    const hint=document.createElement('div');
-    hint.className='today-swipe-hint';
-    hint.innerHTML='<span class="swipe-hand">☝︎</span><span>Swipe left for Dinner Special</span><span class="swipe-arrow">→</span>';
-    todayGrid.insertAdjacentElement('afterend',hint);
+    const hint=document.createElement('div');hint.className='today-swipe-hint';hint.innerHTML='<span class="swipe-hand">☝︎</span><span>Swipe left for Dinner Special</span><span class="swipe-arrow">→</span>';todayGrid.insertAdjacentElement('afterend',hint);
   }
-  const style=document.createElement('style');
-  style.id='today-card-colours';
-  style.textContent=`
-.today-lunch-card{background:linear-gradient(145deg,#13251a,#0f1812);border-color:#315d3d;box-shadow:0 18px 40px rgba(19,92,44,.20)}
-.today-lunch-card .today-badge{background:#6fbd80;color:#07120a}.today-lunch-card h3{color:#dff5e4}
-.today-special-card{background:linear-gradient(145deg,#2b1712,#17100e);border-color:#7d4332;box-shadow:0 18px 40px rgba(143,62,35,.20)}
-.today-special-card .today-badge{background:#e4875f;color:#1b0904}.today-special-card h3{color:#ffe2d5}
+  const style=document.createElement('style');style.id='today-card-colours';style.textContent=`
+.today-grid{perspective:1400px}.today-card{position:relative;border-radius:22px;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s ease,border-color .35s ease;isolation:isolate}.today-card:before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:3;background:linear-gradient(125deg,rgba(255,255,255,.16),transparent 22%,transparent 72%,rgba(255,255,255,.035));box-shadow:inset 1px 1px 0 rgba(255,255,255,.16),inset -1px -1px 0 rgba(0,0,0,.4)}.today-card img{position:relative;z-index:1}.today-card-body{position:relative;z-index:4;transform:translateZ(18px)}.today-card:hover{transform:perspective(1100px) rotateX(2deg) rotateY(-3deg) translateY(-10px);z-index:5}
+.today-lunch-card{background:linear-gradient(145deg,#17351f,#0c1710);border-color:#47875a;box-shadow:12px 14px 0 rgba(45,111,62,.22),0 30px 60px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.08)}.today-lunch-card:hover{box-shadow:16px 20px 0 rgba(45,111,62,.20),0 40px 70px rgba(0,0,0,.55)}.today-lunch-card .today-badge{background:#77cb8b;color:#07120a;box-shadow:0 7px 18px rgba(75,180,100,.22)}.today-lunch-card h3{color:#e0f8e5;text-shadow:0 2px 10px rgba(0,0,0,.3)}
+.today-special-card{background:linear-gradient(145deg,#3a1d14,#160e0b);border-color:#a15339;box-shadow:12px 14px 0 rgba(154,70,42,.22),0 30px 60px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.08)}.today-special-card:hover{box-shadow:16px 20px 0 rgba(154,70,42,.20),0 40px 70px rgba(0,0,0,.55)}.today-special-card .today-badge{background:#f08c61;color:#1b0904;box-shadow:0 7px 18px rgba(224,105,64,.24)}.today-special-card h3{color:#ffe4d8;text-shadow:0 2px 10px rgba(0,0,0,.3)}
 .today-swipe-hint{display:none}
-@media(max-width:800px){
-  .today-swipe-hint{display:flex;align-items:center;justify-content:center;gap:8px;margin:16px 0 0;padding:10px 14px;border-radius:999px;background:rgba(217,182,111,.10);border:1px solid rgba(217,182,111,.32);color:#e7d4a7;font-size:.88rem;font-weight:800;letter-spacing:.01em}
-  .swipe-hand{display:inline-block;transform:rotate(90deg);font-size:1.05rem;animation:swipeHint 1.5s ease-in-out infinite}.swipe-arrow{font-size:1.15rem}
-}
-@keyframes swipeHint{0%,100%{transform:translateX(-3px) rotate(90deg)}50%{transform:translateX(5px) rotate(90deg)}}
-`;
+@media(max-width:800px){.today-card{border-radius:20px;box-shadow:8px 10px 0 rgba(0,0,0,.28),0 24px 45px rgba(0,0,0,.42)}.today-card:hover{transform:none}.today-lunch-card{box-shadow:8px 10px 0 rgba(45,111,62,.22),0 24px 45px rgba(0,0,0,.45)}.today-special-card{box-shadow:8px 10px 0 rgba(154,70,42,.22),0 24px 45px rgba(0,0,0,.45)}.today-swipe-hint{display:flex;align-items:center;justify-content:center;gap:8px;margin:18px 0 0;padding:11px 15px;border-radius:999px;background:linear-gradient(145deg,rgba(217,182,111,.16),rgba(217,182,111,.06));border:1px solid rgba(217,182,111,.4);box-shadow:0 8px 22px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.08);color:#ecd9aa;font-size:.88rem;font-weight:800}.swipe-hand{display:inline-block;transform:rotate(90deg);font-size:1.05rem;animation:swipeHint 1.5s ease-in-out infinite}.swipe-arrow{font-size:1.15rem}}
+@keyframes swipeHint{0%,100%{transform:translateX(-3px) rotate(90deg)}50%{transform:translateX(5px) rotate(90deg)}}`;
   document.head.appendChild(style);
 }
 
