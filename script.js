@@ -1,6 +1,10 @@
 const btn=document.querySelector('.menu-toggle');
 const nav=document.querySelector('.navlinks');
-if(btn&&nav){btn.addEventListener('click',()=>nav.classList.toggle('open'));}
+if(btn){
+  btn.setAttribute('aria-label','Open navigation');
+  btn.innerHTML='<span class="hamburger-line"></span><span class="hamburger-line"></span><span class="hamburger-line"></span>';
+}
+if(btn&&nav){btn.addEventListener('click',()=>{nav.classList.toggle('open');btn.classList.toggle('active',nav.classList.contains('open'));btn.setAttribute('aria-label',nav.classList.contains('open')?'Close navigation':'Open navigation');});}
 
 document.querySelectorAll('a[href]').forEach(a=>{
   const href=a.getAttribute('href');
@@ -14,9 +18,9 @@ document.querySelectorAll('a[href]').forEach(a=>{
   if(clean[href]) a.setAttribute('href',clean[href]);
 });
 
-document.querySelectorAll('.navlinks a').forEach(a=>a.addEventListener('click',()=>nav&&nav.classList.remove('open')));
+document.querySelectorAll('.navlinks a').forEach(a=>a.addEventListener('click',()=>{if(nav)nav.classList.remove('open');if(btn)btn.classList.remove('active');}));
 
-const ASSET_VERSION='6.5';
+const ASSET_VERSION='6.6';
 document.querySelectorAll('img[src^="assets/"]').forEach(img=>{const base=img.getAttribute('src').split('?')[0];img.setAttribute('src',`${base}?v=${ASSET_VERSION}`);});
 document.querySelectorAll('[style*="assets/"]').forEach(el=>{const style=el.getAttribute('style');el.setAttribute('style',style.replace(/(assets\/[A-Za-z0-9._-]+\.(?:webp|png|jpg|jpeg))(?:\?v=[^'\")]+)?/g,`$1?v=${ASSET_VERSION}`));});
 
@@ -27,7 +31,11 @@ const INSTAGRAM_URL='https://www.instagram.com/52south.au?igsi=MXIwc3phMmdqM2Jkc
 const fbIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13.5 22v-9h3l.5-3h-3.5V8.1c0-.9.3-1.6 1.8-1.6H17V3.8c-.5-.1-1.3-.2-2.4-.2-2.4 0-4.1 1.5-4.1 4.2V10H8v3h2.5v9h3z"/></svg>';
 const igIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm10.5 1.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>';
 if(nav&&!nav.querySelector('.nav-socials')){const socialWrap=document.createElement('div');socialWrap.className='nav-socials';socialWrap.innerHTML=`<a class="social-icon" href="${FACEBOOK_URL}" target="_blank" rel="noopener" aria-label="52 South on Facebook">${fbIcon}</a><a class="social-icon" href="${INSTAGRAM_URL}" target="_blank" rel="noopener" aria-label="52 South on Instagram">${igIcon}</a>`;nav.appendChild(socialWrap);}
-if(!document.getElementById('brand-social-fixes')){const style=document.createElement('style');style.id='brand-social-fixes';style.textContent=`.brand img{border-radius:50%!important;overflow:hidden}.brand span{font-size:.92rem;letter-spacing:.035em;text-transform:none}.nav-socials{display:flex;gap:8px;align-items:center}.social-icon{width:34px;height:34px;border:1px solid #3a3a3a;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#f7f5f0}.social-icon svg{width:19px;height:19px}@media(max-width:800px){.brand span{font-size:.78rem;line-height:1.15;max-width:175px}}`;document.head.appendChild(style);}
+if(!document.getElementById('brand-social-fixes')){const style=document.createElement('style');style.id='brand-social-fixes';style.textContent=`
+.brand img{border-radius:50%!important;overflow:hidden}.brand span{font-size:.92rem;letter-spacing:.035em;text-transform:none}.nav-socials{display:flex;gap:8px;align-items:center}.social-icon{width:34px;height:34px;border:1px solid #3a3a3a;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#f7f5f0}.social-icon svg{width:19px;height:19px}
+.menu-toggle{width:48px;height:48px;padding:0!important;display:inline-flex!important;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:14px;line-height:1;background:rgba(15,15,15,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.hamburger-line{display:block;width:22px;height:2px;border-radius:999px;background:#f6f4ef;transition:transform .25s ease,opacity .2s ease}.menu-toggle.active .hamburger-line:nth-child(1){transform:translateY(7px) rotate(45deg)}.menu-toggle.active .hamburger-line:nth-child(2){opacity:0}.menu-toggle.active .hamburger-line:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+@media(max-width:800px){.brand span{font-size:.78rem;line-height:1.15;max-width:175px}.menu-toggle{width:46px;height:46px}}
+`;document.head.appendChild(style);}
 const header=document.querySelector('.site-header');const syncHeader=()=>header&&header.classList.toggle('scrolled',window.scrollY>18);syncHeader();window.addEventListener('scroll',syncHeader,{passive:true});
 const revealTargets=[...document.querySelectorAll('.section > .wrap, .card, .split > *, .scene, .info, .action-card, .menu-category, .gallery-grid img, .form-box, .review-card')];
 revealTargets.forEach(el=>el.classList.add('reveal'));
