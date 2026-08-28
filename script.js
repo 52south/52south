@@ -5,6 +5,7 @@ if(btn){
   btn.innerHTML='<span class="hamburger-line"></span><span class="hamburger-line"></span><span class="hamburger-line"></span>';
 }
 if(btn&&nav){btn.addEventListener('click',()=>{nav.classList.toggle('open');btn.classList.toggle('active',nav.classList.contains('open'));btn.setAttribute('aria-label',nav.classList.contains('open')?'Close navigation':'Open navigation');});}
+if(nav&&!nav.querySelector('a[href="/book-a-table/"]')){const bookingLink=document.createElement('a');bookingLink.href='/book-a-table/';bookingLink.textContent='Book a Table';nav.appendChild(bookingLink);}
 
 document.querySelectorAll('a[href]').forEach(a=>{
   const href=a.getAttribute('href');
