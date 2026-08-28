@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="/">
+  <title>52 South Rewards | Cafe & Restaurant Rosetta</title>
+  <meta name="description" content="Join 52 South Rewards for birthday offers, specials and restaurant news from 52 South in Rosetta.">
+  <link rel="canonical" href="https://52south.au/loyalty/">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header"><div class="wrap nav"><a class="brand" href="/"><img src="assets/52-south-logo.png" alt="52 South Cafe and Restaurant logo"><span>52 South Cafe & Restaurant</span></a><button class="menu-toggle" aria-label="Open navigation">Menu</button><nav class="navlinks"><a href="/">Home</a><a href="/menu/">Menu</a><a href="/gallery/">Gallery</a><a href="/venue-hire/">Venue Hire</a><a href="/contact/">Contact</a></nav></div></header>
+  <main class="booking-page"><section class="section loyalty-hero"><div class="wrap"><div class="eyebrow">52 South Rewards</div><h1>Good food is better shared.</h1><p class="lede">Join our rewards list for birthday offers, special dishes and news from the 52 South kitchen.</p></div></section><section class="section"><div class="wrap booking-layout"><div class="booking-details"><h2>Member benefits</h2><div class="info-grid"><div class="info"><strong>Birthday offers</strong><span class="muted">Receive a little something for your birthday month.</span></div><div class="info"><strong>First to know</strong><span class="muted">Hear about new dishes, events and specials first.</span></div></div></div><form class="booking-form loyalty-form" action="https://formsubmit.co/52southbookings@gmail.com" method="POST"><input type="hidden" name="_subject" value="New 52 South Rewards signup"><input type="hidden" name="_template" value="table"><input type="hidden" name="_next" value="https://52south.au/loyalty/?submitted=true"><input type="hidden" name="_captcha" value="false"><input type="text" name="_honey" class="booking-honeypot" tabindex="-1" autocomplete="off"><div class="booking-success" hidden tabindex="-1"><strong>Welcome to 52 South Rewards.</strong><p>Thank you for joining us.</p></div><label>Full name<input name="name" autocomplete="name" required></label><label>Email address<input name="email" type="email" autocomplete="email" required></label><label>Birthday month <select name="birthday_month"><option value="" selected>Prefer not to say</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></label><label class="consent"><input name="marketing_consent" type="checkbox" value="Yes - customer agreed to receive offers and news" required> I agree to receive offers and news from 52 South. I can unsubscribe at any time.</label><button class="btn gold booking-submit" type="submit">Join 52 South Rewards</button><p class="notice">We use these details only for 52 South news and offers.</p></form></div></section></main>
+  <script src="script.js"></script>
+  <script>if(new URLSearchParams(location.search).has('submitted')){const success=document.querySelector('.booking-success');success.hidden=false;success.focus();document.querySelector('.loyalty-form').reset();}</script>
+</body>
+</html>
