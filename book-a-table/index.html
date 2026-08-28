@@ -20,8 +20,9 @@
       <input type="hidden" name="_template" value="table">
       <input type="hidden" name="_next" value="https://52south.au/book-a-table/?submitted=true">
       <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="booking_reference">
       <input type="text" name="_honey" class="booking-honeypot" tabindex="-1" autocomplete="off">
-      <div class="booking-success" hidden tabindex="-1"><strong>Booking request sent.</strong><p>Thank you. We will contact you to confirm your table.</p></div>
+      <div class="booking-success" hidden tabindex="-1"><strong>Booking request sent.</strong><p>Your booking reference is <span class="booking-reference"></span>. We will contact you to confirm your table.</p></div>
       <div class="booking-fields"><label>Full name<input name="name" autocomplete="name" required></label><label>Mobile number<input name="phone" type="tel" autocomplete="tel" required></label><label>Email address<input name="email" type="email" autocomplete="email" required></label><label>Number of guests<select name="guests" required><option value="" selected disabled>Select guests</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10+</option></select></label><label>Preferred date<input name="booking_date" type="date" required></label><label>Preferred time<input name="booking_time" type="time" min="09:00" max="20:00" required></label></div>
       <label>Special requests or dietary requirements<textarea name="notes" rows="4" placeholder="Optional"></textarea></label>
       <button class="btn gold booking-submit" type="submit">Send booking request</button>
@@ -31,14 +32,23 @@
   <footer class="footer"><div class="wrap footer-grid"><div><img src="assets/52-south-logo.png" alt="52 South Cafe & Restaurant logo"><p>Authentic Sri Lankan flavours and cafe dining in Rosetta, Hobart.</p><p class="tiny">© 52 South Cafe & Restaurant</p></div><div><strong>Visit</strong><p class="muted">52 Marys Hope Road<br>Rosetta, Tasmania</p><a href="tel:+61492144209">0492 144 209</a></div><div><strong>Explore</strong><p><a href="/menu/">Menu</a><br><a href="/venue-hire/">Venue Hire</a><br><a href="/gallery/">Gallery</a><br><a href="/contact/">Contact</a></p></div></div></footer>
   <script src="script.js"></script>
   <script>
+    const bookingForm = document.querySelector('.booking-form');
+    const bookingReference = document.querySelector('input[name="booking_reference"]');
     const bookingDate = document.querySelector('input[name="booking_date"]');
+    const now = new Date();
+    const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const randomPart = crypto.getRandomValues(new Uint32Array(1))[0].toString(36).slice(-5).toUpperCase();
+    const reference = `52S-${datePart}-${randomPart}`;
+    if (bookingReference) bookingReference.value = reference;
     if (bookingDate) {
-      const today = new Date();
-      bookingDate.min = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      bookingDate.min = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
+    if (bookingForm) bookingForm.addEventListener('submit', () => sessionStorage.setItem('lastBookingReference', reference));
     if (new URLSearchParams(location.search).has('submitted')) {
       const success = document.querySelector('.booking-success');
-      const form = document.querySelector('.booking-form');
+      const lastReference = sessionStorage.getItem('lastBookingReference') || reference;
+      const form = bookingForm;
+      document.querySelector('.booking-reference').textContent = lastReference;
       success.hidden = false;
       form.reset();
       success.focus();
