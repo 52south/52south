@@ -1,0 +1,95 @@
+name: Refresh Canva Lunch and Dinner Cards
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/refresh-canva-cards.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out website
+        uses: actions/checkout@v4
+
+      - name: Refresh Canva preview URLs
+        env:
+          LUNCH_VIEW_URL: https://www.canva.com/d/KRH-NmcvbxkHMmV
+          DINNER_VIEW_URL: https://www.canva.com/d/VBYeD39EOS9zy-k
+        run: |
+          python3 - <<'PY'
+          import html
+          import re
+          import subprocess
+          from pathlib import Path
+
+          def fetch(url):
+              return subprocess.check_output([
+                  'curl','-L','--fail','--silent','--show-error',
+                  '-A','Mozilla/5.0',url
+              ], text=True, timeout=30)
+
+          def preview_from_page(url):
+              try:
+                  page = fetch(url)
+              except Exception as exc:
+                  print(f'Could not fetch Canva page: {exc}')
+                  return None
+              patterns = [
+                  r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
+                  r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+                  r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)',
+                  r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
+              ]
+              for pat in patterns:
+                  m = re.search(pat, page, flags=re.I)
+                  if m:
+                      candidate = html.unescape(m.group(1))
+                      if candidate.startswith('https://'):
+                          return candidate
+              return None
+
+          path = Path('script.js')
+          text = path.read_text()
+
+          targets = [
+              ('TODAY_LUNCH_IMAGE', preview_from_page(__import__('os').environ['LUNCH_VIEW_URL'])),
+              ('LATEST_SPECIAL_IMAGE', preview_from_page(__import__('os').environ['DINNER_VIEW_URL'])),
+          ]
+
+          changed = False
+          for const_name, new_url in targets:
+              if not new_url:
+                  print(f'{const_name}: no valid preview returned; keeping current value')
+                  continue
+              pattern = rf"const {const_name}='[^']*';"
+              replacement = f"const {const_name}='{new_url}';"
+              new_text, count = re.subn(pattern, replacement, text, count=1)
+              if count == 1 and new_text != text:
+                  text = new_text
+                  changed = True
+                  print(f'{const_name}: refreshed')
+              elif count == 0:
+                  print(f'{const_name}: constant not found; no change made')
+
+          if changed:
+              path.write_text(text)
+          PY
+
+      - name: Commit refreshed image URLs
+        run: |
+          if git diff --quiet -- script.js; then
+            echo 'No Canva URL change detected.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add script.js
+          git commit -m 'Refresh Canva lunch and dinner card previews'
+          git push
