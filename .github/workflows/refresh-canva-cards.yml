@@ -25,21 +25,49 @@ jobs:
         run: |
           python3 - <<'PY'
           import html
+          import os
           import re
+          import shutil
           import subprocess
           from pathlib import Path
 
-          def fetch(url):
-              return subprocess.check_output([
-                  'curl','-L','--fail','--silent','--show-error',
-                  '-A','Mozilla/5.0',url
-              ], text=True, timeout=30)
-
-          def preview_from_page(url):
+          def curl_page(url):
               try:
-                  page = fetch(url)
+                  return subprocess.check_output([
+                      'curl','-L','--fail','--silent','--show-error',
+                      '-A','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
+                      '-H','Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                      '-H','Accept-Language:en-AU,en;q=0.9',
+                      url
+                  ], text=True, timeout=35)
               except Exception as exc:
-                  print(f'Could not fetch Canva page: {exc}')
+                  print(f'curl blocked for {url}: {exc}')
+                  return None
+
+          def browser_page(url):
+              chrome = shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium') or shutil.which('chromium-browser')
+              if not chrome:
+                  print('No Chrome/Chromium found on runner')
+                  return None
+              try:
+                  return subprocess.check_output([
+                      chrome,
+                      '--headless=new',
+                      '--no-sandbox',
+                      '--disable-gpu',
+                      '--disable-dev-shm-usage',
+                      '--disable-blink-features=AutomationControlled',
+                      '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
+                      '--virtual-time-budget=8000',
+                      '--dump-dom',
+                      url,
+                  ], text=True, timeout=45, stderr=subprocess.STDOUT)
+              except Exception as exc:
+                  print(f'Browser fetch failed for {url}: {exc}')
+                  return None
+
+          def extract_preview(page):
+              if not page:
                   return None
               patterns = [
                   r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
@@ -55,12 +83,20 @@ jobs:
                           return candidate
               return None
 
+          def preview_from_page(url):
+              page = curl_page(url)
+              preview = extract_preview(page)
+              if preview:
+                  return preview
+              print('Trying browser fallback...')
+              return extract_preview(browser_page(url))
+
           path = Path('script.js')
           text = path.read_text()
 
           targets = [
-              ('TODAY_LUNCH_IMAGE', preview_from_page(__import__('os').environ['LUNCH_VIEW_URL'])),
-              ('LATEST_SPECIAL_IMAGE', preview_from_page(__import__('os').environ['DINNER_VIEW_URL'])),
+              ('TODAY_LUNCH_IMAGE', preview_from_page(os.environ['LUNCH_VIEW_URL'])),
+              ('LATEST_SPECIAL_IMAGE', preview_from_page(os.environ['DINNER_VIEW_URL'])),
           ]
 
           changed = False
