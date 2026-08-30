@@ -24,108 +24,66 @@ jobs:
           DINNER_VIEW_URL: https://www.canva.com/d/VBYeD39EOS9zy-k
         run: |
           python3 - <<'PY'
-          import html
-          import os
-          import re
-          import shutil
-          import subprocess
+          import html, os, re, shutil, subprocess
           from pathlib import Path
 
           def curl_page(url):
               try:
-                  return subprocess.check_output([
-                      'curl','-L','--fail','--silent','--show-error',
-                      '-A','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
-                      '-H','Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                      '-H','Accept-Language:en-AU,en;q=0.9',
-                      url
-                  ], text=True, timeout=35)
+                  return subprocess.check_output(['curl','-L','--fail','--silent','--show-error','-A','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36','-H','Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8','-H','Accept-Language:en-AU,en;q=0.9',url],text=True,timeout=35)
               except Exception as exc:
-                  print(f'curl blocked for {url}: {exc}')
-                  return None
+                  print(f'curl blocked: {exc}'); return None
 
           def browser_page(url):
-              chrome = shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium') or shutil.which('chromium-browser')
-              if not chrome:
-                  print('No Chrome/Chromium found on runner')
-                  return None
+              chrome=shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium') or shutil.which('chromium-browser')
+              if not chrome: return None
               try:
-                  return subprocess.check_output([
-                      chrome,
-                      '--headless=new',
-                      '--no-sandbox',
-                      '--disable-gpu',
-                      '--disable-dev-shm-usage',
-                      '--disable-blink-features=AutomationControlled',
-                      '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
-                      '--virtual-time-budget=8000',
-                      '--dump-dom',
-                      url,
-                  ], text=True, timeout=45, stderr=subprocess.STDOUT)
+                  return subprocess.check_output([chrome,'--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-blink-features=AutomationControlled','--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36','--virtual-time-budget=8000','--dump-dom',url],text=True,timeout=45,stderr=subprocess.STDOUT)
               except Exception as exc:
-                  print(f'Browser fetch failed for {url}: {exc}')
-                  return None
+                  print(f'Browser fetch failed: {exc}'); return None
 
-          def extract_preview(page):
-              if not page:
-                  return None
-              patterns = [
-                  r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
-                  r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
-                  r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)',
-                  r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
-              ]
+          def valid_preview(candidate, design_id):
+              if not candidate or not candidate.startswith('https://'): return False
+              bad=('static.canva.com/domain-assets','fb_cover','og-image','canva-logo','brand-assets')
+              if any(x in candidate.lower() for x in bad): return False
+              return design_id in candidate or 'media.canva.com/v2/document-image/' in candidate or 'document-export.canva.com' in candidate
+
+          def extract_preview(page, design_id):
+              if not page: return None
+              patterns=[r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)',r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']']
               for pat in patterns:
-                  m = re.search(pat, page, flags=re.I)
+                  m=re.search(pat,page,flags=re.I)
                   if m:
-                      candidate = html.unescape(m.group(1))
-                      if candidate.startswith('https://'):
-                          return candidate
+                      candidate=html.unescape(m.group(1))
+                      if valid_preview(candidate,design_id): return candidate
+              # Search rendered DOM directly for the design-specific document image.
+              for candidate in re.findall(r'https://[^"\'<> ]+',page):
+                  candidate=html.unescape(candidate)
+                  if valid_preview(candidate,design_id): return candidate
               return None
 
-          def preview_from_page(url):
-              page = curl_page(url)
-              preview = extract_preview(page)
-              if preview:
-                  return preview
-              print('Trying browser fallback...')
-              return extract_preview(browser_page(url))
+          def preview_from_page(url,design_id):
+              preview=extract_preview(curl_page(url),design_id)
+              if preview: return preview
+              return extract_preview(browser_page(url),design_id)
 
-          path = Path('script.js')
-          text = path.read_text()
-
-          targets = [
-              ('TODAY_LUNCH_IMAGE', preview_from_page(os.environ['LUNCH_VIEW_URL'])),
-              ('LATEST_SPECIAL_IMAGE', preview_from_page(os.environ['DINNER_VIEW_URL'])),
-          ]
-
-          changed = False
-          for const_name, new_url in targets:
+          path=Path('script.js'); text=path.read_text()
+          targets=[('TODAY_LUNCH_IMAGE',preview_from_page(os.environ['LUNCH_VIEW_URL'],'DAHTiSdMgDc')),('LATEST_SPECIAL_IMAGE',preview_from_page(os.environ['DINNER_VIEW_URL'],'DAHTpqyzKq8'))]
+          changed=False
+          for const_name,new_url in targets:
               if not new_url:
-                  print(f'{const_name}: no valid preview returned; keeping current value')
-                  continue
-              pattern = rf"const {const_name}='[^']*';"
-              replacement = f"const {const_name}='{new_url}';"
-              new_text, count = re.subn(pattern, replacement, text, count=1)
-              if count == 1 and new_text != text:
-                  text = new_text
-                  changed = True
-                  print(f'{const_name}: refreshed')
-              elif count == 0:
-                  print(f'{const_name}: constant not found; no change made')
-
-          if changed:
-              path.write_text(text)
+                  print(f'{const_name}: no verified design preview; keeping current value'); continue
+              pattern=rf"const {const_name}='[^']*';"; replacement=f"const {const_name}='{new_url}';"
+              new_text,count=re.subn(pattern,replacement,text,count=1)
+              if count==1 and new_text!=text:
+                  text=new_text; changed=True; print(f'{const_name}: refreshed with verified design image')
+          if changed: path.write_text(text)
           PY
 
       - name: Commit refreshed image URLs
         run: |
-          if git diff --quiet -- script.js; then
-            echo 'No Canva URL change detected.'
-            exit 0
-          fi
+          if git diff --quiet -- script.js; then echo 'No verified Canva URL change detected.'; exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add script.js
-          git commit -m 'Refresh Canva lunch and dinner card previews'
+          git commit -m 'Refresh verified Canva lunch and dinner previews'
           git push
