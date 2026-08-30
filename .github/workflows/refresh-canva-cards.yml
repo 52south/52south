@@ -18,10 +18,12 @@ jobs:
       - name: Check out website
         uses: actions/checkout@v4
 
-      - name: Refresh Canva preview URLs
+      - name: Refresh Canva preview URLs safely
         env:
-          LUNCH_VIEW_URL: https://www.canva.com/d/KRH-NmcvbxkHMmV
-          DINNER_VIEW_URL: https://www.canva.com/d/VBYeD39EOS9zy-k
+          LUNCH_VIEW_URL: https://www.canva.com/d/AZqy62aBrnnuhGT
+          DINNER_VIEW_URL: https://www.canva.com/d/LdewCPEoQHq8X-i
+          SAFE_LUNCH_URL: https://media.canva.com/v2/document-image/hash:1232627192/height:447/id:DAHTiSdMgDc/type:B/width:447?brand=BACf_n-1sH4&csig=AAAAAAAAAAAAAAAAAAAAAJKRQT5uYp7U9ANiiFAs787JHvg9bFZOxLXHOH-qw49f&disableexport=T&exp=1788069089&fallback=https%3A%2F%2Fs3.amazonaws.com%2Fdocument-export.canva.com%2FdMgDc%2FDAHTiSdMgDc%2F3%2Fthumbnail%2F0001.png%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQYCGKMUH4GDRW44L%252F20260829%252Fus-east-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260829T051015Z%26X-Amz-Expires%3D88874%26X-Amz-Signature%3D43f302ecd69195031094d03f8402f8706d855b8369aed730d70499ac5b198027%26X-Amz-SignedHeaders%3Dhost%26response-expires%3DSun%252C%252030%2520Aug%25202026%252005%253A51%253A29%2520GMT&osig=AAAAAAAAAAAAAAAAAAAAAFUgEjEB7hzjO4xI-L6dEiQpkzZS0T66JBpb3fOiI8Rd&page=1&signed=brand%2Cdisableexport%2Cfallback%2Cpage%2Cversion&signer=document-rpc&version=3
+          SAFE_DINNER_URL: https://media.canva.com/v2/document-image/hash:325865018/height:447/id:DAHTpqyzKq8/type:B/width:447?brand=BACf_n-1sH4&csig=AAAAAAAAAAAAAAAAAAAAAMcAKz1JR5TvBQB12N4AmBh_RWuOrBrOHnSEU4N3Aivv&disableexport=T&exp=1788069105&fallback=https%3A%2F%2Fs3.amazonaws.com%2Fdocument-export.canva.com%2FyzKq8%2FDAHTpqyzKq8%2F3%2Fthumbnail%2F0001.png%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQYCGKMUH4GDRW44L%252F20260829%252Fus-east-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260829T234118Z%26X-Amz-Expires%3D22227%26X-Amz-Signature%3Dbe29577c647e94b6ff9cc14115d9deaa1ce4ac126ec5c2707d68e01880bb4f2e%26X-Amz-SignedHeaders%3Dhost%26response-expires%3DSun%252C%252030%2520Aug%25202026%252005%253A51%253A45%2520GMT&osig=AAAAAAAAAAAAAAAAAAAAAAaE7aG3m8hVLh0KeblPwfUIVDIySGUMkPX-6S1x_gmM&page=1&signed=brand%2Cdisableexport%2Cfallback%2Cpage%2Cversion&signer=document-rpc&version=3
         run: |
           python3 - <<'PY'
           import html, os, re, shutil, subprocess
@@ -29,59 +31,114 @@ jobs:
 
           def curl_page(url):
               try:
-                  return subprocess.check_output(['curl','-L','--fail','--silent','--show-error','-A','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36','-H','Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8','-H','Accept-Language:en-AU,en;q=0.9',url],text=True,timeout=35)
+                  return subprocess.check_output([
+                      'curl','-L','--fail','--silent','--show-error',
+                      '-A','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
+                      '-H','Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                      '-H','Accept-Language:en-AU,en;q=0.9',url
+                  ], text=True, timeout=35)
               except Exception as exc:
-                  print(f'curl blocked: {exc}'); return None
+                  print(f'curl blocked: {exc}')
+                  return None
 
           def browser_page(url):
-              chrome=shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium') or shutil.which('chromium-browser')
-              if not chrome: return None
+              chrome = shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium') or shutil.which('chromium-browser')
+              if not chrome:
+                  return None
               try:
-                  return subprocess.check_output([chrome,'--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--disable-blink-features=AutomationControlled','--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36','--virtual-time-budget=8000','--dump-dom',url],text=True,timeout=45,stderr=subprocess.STDOUT)
+                  return subprocess.check_output([
+                      chrome,'--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
+                      '--disable-blink-features=AutomationControlled',
+                      '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
+                      '--virtual-time-budget=8000','--dump-dom',url
+                  ], text=True, timeout=45, stderr=subprocess.STDOUT)
               except Exception as exc:
-                  print(f'Browser fetch failed: {exc}'); return None
+                  print(f'Browser fetch failed: {exc}')
+                  return None
 
           def valid_preview(candidate, design_id):
-              if not candidate or not candidate.startswith('https://'): return False
-              bad=('static.canva.com/domain-assets','fb_cover','og-image','canva-logo','brand-assets')
-              if any(x in candidate.lower() for x in bad): return False
-              return design_id in candidate or 'media.canva.com/v2/document-image/' in candidate or 'document-export.canva.com' in candidate
+              if not candidate or not candidate.startswith('https://'):
+                  return False
+              candidate = html.unescape(candidate)
+              low = candidate.lower()
+              if 'static.canva.com' in low or 'fb_cover' in low or 'canva-logo' in low:
+                  return False
+              # Never accept a generic Canva image. It must identify the exact design.
+              return design_id in candidate and (
+                  'media.canva.com/v2/document-image/' in candidate or
+                  'document-export.canva.com' in candidate
+              )
 
           def extract_preview(page, design_id):
-              if not page: return None
-              patterns=[r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)',r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']']
-              for pat in patterns:
-                  m=re.search(pat,page,flags=re.I)
-                  if m:
-                      candidate=html.unescape(m.group(1))
-                      if valid_preview(candidate,design_id): return candidate
-              # Search rendered DOM directly for the design-specific document image.
-              for candidate in re.findall(r'https://[^"\'<> ]+',page):
-                  candidate=html.unescape(candidate)
-                  if valid_preview(candidate,design_id): return candidate
+              if not page:
+                  return None
+              # Search all rendered URLs first so we can find the exact design-specific image.
+              candidates = re.findall(r'https://[^"\'<> ]+', page)
+              for raw in candidates:
+                  candidate = html.unescape(raw).replace('&amp;', '&')
+                  if valid_preview(candidate, design_id):
+                      return candidate
               return None
 
-          def preview_from_page(url,design_id):
-              preview=extract_preview(curl_page(url),design_id)
-              if preview: return preview
-              return extract_preview(browser_page(url),design_id)
+          def preview_from_page(url, design_id):
+              preview = extract_preview(curl_page(url), design_id)
+              if preview:
+                  return preview
+              print(f'{design_id}: trying browser fallback')
+              return extract_preview(browser_page(url), design_id)
 
-          path=Path('script.js'); text=path.read_text()
-          targets=[('TODAY_LUNCH_IMAGE',preview_from_page(os.environ['LUNCH_VIEW_URL'],'DAHTiSdMgDc')),('LATEST_SPECIAL_IMAGE',preview_from_page(os.environ['DINNER_VIEW_URL'],'DAHTpqyzKq8'))]
-          changed=False
-          for const_name,new_url in targets:
-              if not new_url:
-                  print(f'{const_name}: no verified design preview; keeping current value'); continue
-              pattern=rf"const {const_name}='[^']*';"; replacement=f"const {const_name}='{new_url}';"
-              new_text,count=re.subn(pattern,replacement,text,count=1)
-              if count==1 and new_text!=text:
-                  text=new_text; changed=True; print(f'{const_name}: refreshed with verified design image')
-          if changed: path.write_text(text)
+          def current_value(text, const_name):
+              m = re.search(rf"const {const_name}='([^']*)';", text)
+              return m.group(1) if m else ''
+
+          def current_is_bad(url, design_id):
+              if not url:
+                  return True
+              low = url.lower()
+              if 'static.canva.com' in low or 'fb_cover' in low:
+                  return True
+              if 'canva.com' in low and design_id not in url:
+                  return True
+              return False
+
+          path = Path('script.js')
+          text = path.read_text()
+          configs = [
+              ('TODAY_LUNCH_IMAGE', 'DAHTiSdMgDc', os.environ['LUNCH_VIEW_URL'], os.environ['SAFE_LUNCH_URL']),
+              ('LATEST_SPECIAL_IMAGE', 'DAHTpqyzKq8', os.environ['DINNER_VIEW_URL'], os.environ['SAFE_DINNER_URL']),
+          ]
+
+          changed = False
+          for const_name, design_id, view_url, safe_url in configs:
+              new_url = preview_from_page(view_url, design_id)
+              old_url = current_value(text, const_name)
+              if new_url:
+                  chosen = new_url
+                  print(f'{const_name}: verified fresh preview found')
+              elif current_is_bad(old_url, design_id):
+                  chosen = safe_url
+                  print(f'{const_name}: current image is invalid; restoring verified safe preview')
+              else:
+                  print(f'{const_name}: no verified new preview; keeping current correct image')
+                  continue
+
+              pattern = rf"const {const_name}='[^']*';"
+              replacement = f"const {const_name}='{chosen}';"
+              new_text, count = re.subn(pattern, replacement, text, count=1)
+              if count == 1 and new_text != text:
+                  text = new_text
+                  changed = True
+
+          if changed:
+              path.write_text(text)
           PY
 
       - name: Commit refreshed image URLs
         run: |
-          if git diff --quiet -- script.js; then echo 'No verified Canva URL change detected.'; exit 0; fi
+          if git diff --quiet -- script.js; then
+            echo 'No verified Canva URL change detected.'
+            exit 0
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add script.js
