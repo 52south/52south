@@ -20,9 +20,9 @@ jobs:
 
       - name: Refresh Canva preview URLs safely
         env:
-          LUNCH_VIEW_URL: https://www.canva.com/d/AZqy62aBrnnuhGT
+          LUNCH_VIEW_URL: https://www.canva.com/d/8bzIntqCrgSzHv1
           DINNER_VIEW_URL: https://www.canva.com/d/LdewCPEoQHq8X-i
-          SAFE_LUNCH_URL: https://media.canva.com/v2/document-image/hash:1232627192/height:447/id:DAHTiSdMgDc/type:B/width:447?brand=BACf_n-1sH4&csig=AAAAAAAAAAAAAAAAAAAAAJKRQT5uYp7U9ANiiFAs787JHvg9bFZOxLXHOH-qw49f&disableexport=T&exp=1788069089&fallback=https%3A%2F%2Fs3.amazonaws.com%2Fdocument-export.canva.com%2FdMgDc%2FDAHTiSdMgDc%2F3%2Fthumbnail%2F0001.png%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQYCGKMUH4GDRW44L%252F20260829%252Fus-east-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260829T051015Z%26X-Amz-Expires%3D88874%26X-Amz-Signature%3D43f302ecd69195031094d03f8402f8706d855b8369aed730d70499ac5b198027%26X-Amz-SignedHeaders%3Dhost%26response-expires%3DSun%252C%252030%2520Aug%25202026%252005%253A51%253A29%2520GMT&osig=AAAAAAAAAAAAAAAAAAAAAFUgEjEB7hzjO4xI-L6dEiQpkzZS0T66JBpb3fOiI8Rd&page=1&signed=brand%2Cdisableexport%2Cfallback%2Cpage%2Cversion&signer=document-rpc&version=3
+          SAFE_LUNCH_URL: https://media.canva.com/v2/document-image/hash:-1921731868/height:447/id:DAHTuu8X2yM/type:B/width:447?brand=BACf_n-1sH4&csig=AAAAAAAAAAAAAAAAAAAAAGrma2_hZPS7ZPy4ITc1LBaK-w5iTQwAQHT5LzyZsCC_&disableexport=T&exp=1788069674&fallback=https%3A%2F%2Fs3.amazonaws.com%2Fdocument-export.canva.com%2F8X2yM%2FDAHTuu8X2yM%2F3%2Fthumbnail%2F0001.png%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQYCGKMUH4GDRW44L%252F20260829%252Fus-east-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260829T151915Z%26X-Amz-Expires%3D52919%26X-Amz-Signature%3Dd053a8d23797cca7c99cf7ccb2ab45f986e8c85d54c9ecca26094866b1373b22%26X-Amz-SignedHeaders%3Dhost%26response-expires%3DSun%252C%252030%2520Aug%25202026%252006%253A01%253A14%2520GMT&osig=AAAAAAAAAAAAAAAAAAAAAConWZwI-KaMNJvq9GNP-INtJ3nX8XFdEotBFUsYsvrD&page=1&signed=brand%2Cdisableexport%2Cfallback%2Cpage%2Cversion&signer=document-rpc&version=3
           SAFE_DINNER_URL: https://media.canva.com/v2/document-image/hash:325865018/height:447/id:DAHTpqyzKq8/type:B/width:447?brand=BACf_n-1sH4&csig=AAAAAAAAAAAAAAAAAAAAAMcAKz1JR5TvBQB12N4AmBh_RWuOrBrOHnSEU4N3Aivv&disableexport=T&exp=1788069105&fallback=https%3A%2F%2Fs3.amazonaws.com%2Fdocument-export.canva.com%2FyzKq8%2FDAHTpqyzKq8%2F3%2Fthumbnail%2F0001.png%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQYCGKMUH4GDRW44L%252F20260829%252Fus-east-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260829T234118Z%26X-Amz-Expires%3D22227%26X-Amz-Signature%3Dbe29577c647e94b6ff9cc14115d9deaa1ce4ac126ec5c2707d68e01880bb4f2e%26X-Amz-SignedHeaders%3Dhost%26response-expires%3DSun%252C%252030%2520Aug%25202026%252005%253A51%253A45%2520GMT&osig=AAAAAAAAAAAAAAAAAAAAAAaE7aG3m8hVLh0KeblPwfUIVDIySGUMkPX-6S1x_gmM&page=1&signed=brand%2Cdisableexport%2Cfallback%2Cpage%2Cversion&signer=document-rpc&version=3
         run: |
           python3 - <<'PY'
@@ -63,7 +63,6 @@ jobs:
               low = candidate.lower()
               if 'static.canva.com' in low or 'fb_cover' in low or 'canva-logo' in low:
                   return False
-              # Never accept a generic Canva image. It must identify the exact design.
               return design_id in candidate and (
                   'media.canva.com/v2/document-image/' in candidate or
                   'document-export.canva.com' in candidate
@@ -72,7 +71,6 @@ jobs:
           def extract_preview(page, design_id):
               if not page:
                   return None
-              # Search all rendered URLs first so we can find the exact design-specific image.
               candidates = re.findall(r'https://[^"\'<> ]+', page)
               for raw in candidates:
                   candidate = html.unescape(raw).replace('&amp;', '&')
@@ -104,7 +102,7 @@ jobs:
           path = Path('script.js')
           text = path.read_text()
           configs = [
-              ('TODAY_LUNCH_IMAGE', 'DAHTiSdMgDc', os.environ['LUNCH_VIEW_URL'], os.environ['SAFE_LUNCH_URL']),
+              ('TODAY_LUNCH_IMAGE', 'DAHTuu8X2yM', os.environ['LUNCH_VIEW_URL'], os.environ['SAFE_LUNCH_URL']),
               ('LATEST_SPECIAL_IMAGE', 'DAHTpqyzKq8', os.environ['DINNER_VIEW_URL'], os.environ['SAFE_DINNER_URL']),
           ]
 
