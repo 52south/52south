@@ -76,7 +76,7 @@
     const reservationForm=document.querySelector('form.reservation-card');
     const bookingDate=document.querySelector('input[name="booking_date"]');
     if(bookingDate){const now=new Date();const localDate=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);bookingDate.min=localDate;}
-    if(reservationForm){reservationForm.addEventListener('submit',()=>{const submitButton=reservationForm.querySelector('.reservation-submit');const status=reservationForm.querySelector('.reservation-status');if(submitButton){submitButton.disabled=true;submitButton.classList.add('is-loading');submitButton.querySelector('strong').textContent='Sending your request…';}if(status){status.textContent='Please keep this page open while we securely send your booking.';}window.setTimeout(()=>window.location.assign('/'),2500);});}
+    if(reservationForm){reservationForm.addEventListener('submit',()=>{const confirmationWindow=window.open('about:blank','booking-confirmation');if(confirmationWindow){reservationForm.target='booking-confirmation';}else{reservationForm.removeAttribute('target');}const submitButton=reservationForm.querySelector('.reservation-submit');const status=reservationForm.querySelector('.reservation-status');window.setTimeout(()=>{if(submitButton){submitButton.disabled=true;submitButton.classList.add('is-loading');submitButton.querySelector('strong').textContent='Sending your request…';}if(status){status.textContent='Please keep this page open while we securely send your booking.';}},0);if(confirmationWindow){window.setTimeout(()=>window.location.assign('/'),6000);}});}
   </script>
 </body>
 </html>
