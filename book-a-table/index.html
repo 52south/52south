@@ -103,16 +103,12 @@
       }
       const ref=`52S-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${refSuffix}`;
       refInput.value=ref;
+      try{sessionStorage.setItem('lastBookingReference',ref)}catch(error){}
       const show=n=>{steps.forEach(s=>s.classList.toggle('active',Number(s.dataset.step)===n));dots.forEach((d,i)=>d.classList.toggle('active',i===n-1));window.scrollTo({top:Math.max(0,form.getBoundingClientRect().top+window.scrollY-120),behavior:'smooth'});};
       const validStep1=()=>{if(!guests.value||!date.value||!time.value){[guests,date,time].forEach(el=>{if(!el.value)el.reportValidity()});return false;}return true;};
       form.querySelector('[data-next="2"]').addEventListener('click',()=>{if(validStep1())show(2)});
       form.querySelector('[data-next="3"]').addEventListener('click',()=>{if(!agree.checked){agree.reportValidity();return;}const d=new Date(`${date.value}T00:00:00`);const niceDate=d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});const niceTime=new Date(`2000-01-01T${time.value}`).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});summary.innerHTML=`Your reservation request for <strong>${guests.value}</strong> ${guests.value==='1'?'person':'people'} is for<br><strong>${niceTime}</strong> on <strong>${niceDate}</strong>.`;show(3)});
       form.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.back))));
-      form.addEventListener('submit',e=>{
-        if(!agree.checked){e.preventDefault();show(2);agree.reportValidity();return;}
-        if(!form.reportValidity()){e.preventDefault();return;}
-        sessionStorage.setItem('lastBookingReference',ref);
-      });
     })();
   </script>
 </body>
