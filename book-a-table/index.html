@@ -33,7 +33,8 @@
     <section class="section booking-hero"><div class="wrap"><div class="booking-kicker">Bookings</div><h1>Book a Table</h1><p class="lede">Reserve your table at 52 South Cafe & Restaurant.</p><p class="booking-call">Need help? <a href="tel:+61492144209">Call 0492 144 209</a>.</p></div></section>
 
     <div class="booking-shell">
-      <form class="booking-form booking-panel" action="https://formsubmit.co/52south.au@gmail.com" method="POST">
+      <iframe name="booking-submit-frame" title="Booking submission" hidden></iframe>
+      <form class="booking-form booking-panel" action="https://formsubmit.co/52south.au@gmail.com" method="POST" target="booking-submit-frame">
         <input type="hidden" name="_subject" value="New 52 South table booking">
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://52south.au/booking-confirmed/">
@@ -109,6 +110,9 @@
       form.querySelector('[data-next="2"]').addEventListener('click',()=>{if(validStep1())show(2)});
       form.querySelector('[data-next="3"]').addEventListener('click',()=>{if(!agree.checked){agree.reportValidity();return;}const d=new Date(`${date.value}T00:00:00`);const niceDate=d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});const niceTime=new Date(`2000-01-01T${time.value}`).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});summary.innerHTML=`Your reservation request for <strong>${guests.value}</strong> ${guests.value==='1'?'person':'people'} is for<br><strong>${niceTime}</strong> on <strong>${niceDate}</strong>.`;show(3)});
       form.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.back))));
+      form.addEventListener('submit',()=>{
+        window.setTimeout(()=>location.assign('/booking-confirmed/'),1200);
+      });
     })();
   </script>
 </body>
