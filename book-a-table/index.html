@@ -42,7 +42,7 @@
     <section class="reservation-hero"><div class="wrap"><div class="reservation-kicker">Your table awaits</div><h1>Reserve at 52 South</h1><p class="lede">Send us your preferred date and time. Our team will reply to confirm your table for authentic Sri Lankan food and relaxed cafe dining in Rosetta.</p></div></section>
 
     <div class="reservation-layout">
-      <form class="reservation-card" action="https://formsubmit.co/52south.au@gmail.com" method="POST" target="_blank">
+      <form class="reservation-card" action="https://formsubmit.co/52south.au@gmail.com" method="POST" target="booking-confirmation">
         <input type="hidden" name="_subject" value="New 52 South table booking">
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://52south.au/booking-confirmed/">
@@ -79,7 +79,7 @@
     const reservationForm=document.querySelector('form.reservation-card');
     const bookingDate=document.querySelector('input[name="booking_date"]');
     if(bookingDate){const now=new Date();const localDate=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);bookingDate.min=localDate;}
-    if(reservationForm){reservationForm.addEventListener('submit',()=>{window.setTimeout(()=>window.location.assign('/'),250);});}
+    if(reservationForm){reservationForm.addEventListener('submit',()=>{window.setTimeout(()=>window.location.assign('/'),2000);});}
   </script>
 </body>
 </html>
