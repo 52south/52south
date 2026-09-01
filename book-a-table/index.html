@@ -94,7 +94,15 @@
       const pad=n=>String(n).padStart(2,'0');
       const today=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
       date.min=today;
-      const ref=`52S-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36).slice(-5).toUpperCase()}`;
+      let refSuffix;
+      try{
+        const randomValues=new Uint32Array(1);
+        window.crypto.getRandomValues(randomValues);
+        refSuffix=randomValues[0].toString(36).slice(-5).toUpperCase();
+      }catch(error){
+        refSuffix=Math.floor(Math.random()*1679616).toString(36).padStart(4,'0').toUpperCase();
+      }
+      const ref=`52S-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${refSuffix}`;
       refInput.value=ref;
       const show=n=>{steps.forEach(s=>s.classList.toggle('active',Number(s.dataset.step)===n));dots.forEach((d,i)=>d.classList.toggle('active',i===n-1));window.scrollTo({top:Math.max(0,form.getBoundingClientRect().top+window.scrollY-120),behavior:'smooth'});};
       const validStep1=()=>{if(!guests.value||!date.value||!time.value){[guests,date,time].forEach(el=>{if(!el.value)el.reportValidity()});return false;}return true;};
