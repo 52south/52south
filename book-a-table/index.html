@@ -73,7 +73,7 @@
           <label class="booking-field"><span>Mobile</span><input name="phone" type="tel" autocomplete="tel" placeholder="04XX XXX XXX" required></label>
           <label class="booking-field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
           <label class="booking-field"><span>Comments / dietary requirements</span><textarea name="notes" rows="4" placeholder="Optional"></textarea></label>
-          <button class="booking-action" type="submit">CONFIRM BOOKING REQUEST</button>
+          <button class="booking-action" id="confirmBooking" type="button">CONFIRM BOOKING REQUEST</button>
           <button class="booking-back" type="button" data-back="2">Back to booking terms</button>
           <p class="booking-note">Your booking is a request until confirmed by our team. Your details are sent to 52 South through our form-processing provider. See our <a href="/privacy/">privacy notice</a>.</p>
         </section>
@@ -111,7 +111,11 @@
       form.querySelector('[data-next="2"]').addEventListener('click',()=>{if(validStep1())show(2)});
       form.querySelector('[data-next="3"]').addEventListener('click',()=>{if(!agree.checked){agree.reportValidity();return;}const d=new Date(`${date.value}T00:00:00`);const niceDate=d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});const niceTime=new Date(`2000-01-01T${time.value}`).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});summary.innerHTML=`Your reservation request for <strong>${guests.value}</strong> ${guests.value==='1'?'person':'people'} is for<br><strong>${niceTime}</strong> on <strong>${niceDate}</strong>.`;show(3)});
       form.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.back))));
-      form.addEventListener('submit',()=>{
+      const confirmButton=document.getElementById('confirmBooking');
+      confirmButton.addEventListener('click',()=>{
+        if(!form.reportValidity())return;
+        confirmButton.textContent='SENDING BOOKING REQUEST…';
+        form.submit();
         window.setTimeout(()=>location.assign('/booking-confirmed/'),1200);
       });
     })();
