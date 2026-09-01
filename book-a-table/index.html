@@ -33,9 +33,8 @@
     <section class="section booking-hero"><div class="wrap"><div class="booking-kicker">Bookings</div><h1>Book a Table</h1><p class="lede">Reserve your table at 52 South Cafe & Restaurant.</p><p class="booking-call">Need help? <a href="tel:+61492144209">Call 0492 144 209</a>.</p></div></section>
 
     <div class="booking-shell">
-      <form class="booking-form booking-panel" action="https://formsubmit.co/52southbookings@gmail.com" method="POST">
+      <form class="booking-form booking-panel" action="https://formsubmit.co/ajax/52south.au@gmail.com" method="POST">
         <input type="hidden" name="_subject" value="New 52 South table booking">
-        <input type="hidden" name="_cc" value="52south.au@gmail.com">
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_next" value="https://52south.au/booking-confirmed/">
         <input type="hidden" name="_captcha" value="false">
@@ -73,6 +72,7 @@
           <label class="booking-field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
           <label class="booking-field"><span>Comments / dietary requirements</span><textarea name="notes" rows="4" placeholder="Optional"></textarea></label>
           <button class="booking-action" type="submit">CONFIRM BOOKING REQUEST</button>
+          <p class="booking-submit-status" role="status" aria-live="polite" hidden></p>
           <button class="booking-back" type="button" data-back="2">Back to booking terms</button>
           <p class="booking-note">Your booking is a request until confirmed by our team. Your details are sent to 52 South through our form-processing provider. See our <a href="/privacy/">privacy notice</a>.</p>
         </section>
@@ -101,7 +101,28 @@
       form.querySelector('[data-next="2"]').addEventListener('click',()=>{if(validStep1())show(2)});
       form.querySelector('[data-next="3"]').addEventListener('click',()=>{if(!agree.checked){agree.reportValidity();return;}const d=new Date(`${date.value}T00:00:00`);const niceDate=d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});const niceTime=new Date(`2000-01-01T${time.value}`).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});summary.innerHTML=`Your reservation request for <strong>${guests.value}</strong> ${guests.value==='1'?'person':'people'} is for<br><strong>${niceTime}</strong> on <strong>${niceDate}</strong>.`;show(3)});
       form.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.back))));
-      form.addEventListener('submit',e=>{if(!agree.checked){e.preventDefault();show(2);agree.reportValidity();return;}sessionStorage.setItem('lastBookingReference',ref);});
+      form.addEventListener('submit',async e=>{
+        e.preventDefault();
+        if(!agree.checked){show(2);agree.reportValidity();return;}
+        if(!form.reportValidity())return;
+        const button=form.querySelector('[type="submit"]');
+        const status=form.querySelector('.booking-submit-status');
+        button.disabled=true;
+        button.textContent='SENDING BOOKING REQUEST…';
+        status.hidden=false;
+        status.textContent='Please wait while we send your request.';
+        try{
+          const response=await fetch(form.action,{method:'POST',body:new FormData(form),headers:{Accept:'application/json'}});
+          const result=await response.json().catch(()=>({}));
+          if(!response.ok||result.success===false)throw new Error(result.message||'Booking service unavailable');
+          sessionStorage.setItem('lastBookingReference',ref);
+          location.assign('/booking-confirmed/');
+        }catch(error){
+          button.disabled=false;
+          button.textContent='CONFIRM BOOKING REQUEST';
+          status.innerHTML='We could not send your request. Please try again or call <a href="tel:+61492144209">0492 144 209</a>.';
+        }
+      });
     })();
   </script>
 </body>
