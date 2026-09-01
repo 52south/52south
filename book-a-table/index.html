@@ -72,7 +72,6 @@
           <label class="booking-field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
           <label class="booking-field"><span>Comments / dietary requirements</span><textarea name="notes" rows="4" placeholder="Optional"></textarea></label>
           <button class="booking-action" type="submit">CONFIRM BOOKING REQUEST</button>
-          <p class="booking-submit-status" role="status" aria-live="polite" hidden></p>
           <button class="booking-back" type="button" data-back="2">Back to booking terms</button>
           <p class="booking-note">Your booking is a request until confirmed by our team. Your details are sent to 52 South through our form-processing provider. See our <a href="/privacy/">privacy notice</a>.</p>
         </section>
@@ -112,13 +111,7 @@
       form.addEventListener('submit',e=>{
         if(!agree.checked){e.preventDefault();show(2);agree.reportValidity();return;}
         if(!form.reportValidity()){e.preventDefault();return;}
-        const button=form.querySelector('[type="submit"]');
-        const status=form.querySelector('.booking-submit-status');
         sessionStorage.setItem('lastBookingReference',ref);
-        button.disabled=true;
-        button.textContent='SENDING BOOKING REQUEST…';
-        status.hidden=false;
-        status.textContent='Please wait while we send your request and open the confirmation page.';
       });
     })();
   </script>
