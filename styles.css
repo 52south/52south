@@ -25,6 +25,9 @@ a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 24px}
 @keyframes heroIn{to{opacity:1;transform:none}}@keyframes heroZoom{from{background-size:104% auto}to{background-size:100% auto}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.reveal{opacity:1!important;transform:none!important}.atmosphere{background-attachment:scroll}}
 
 /* Mobile swipe carousel: Today’s Rice & Curry + Dinner/Special only */
+.gallery-grid img,.footer img{height:auto}
+@media(max-width:800px){.gallery-grid{columns:1}}
+
 @media(max-width:800px){
   .today-section .today-grid{display:grid!important;grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:100%;gap:0!important;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x pan-y}
   .today-section .today-grid::-webkit-scrollbar{display:none}
