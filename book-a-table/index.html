@@ -55,8 +55,8 @@
         <p class="form-intro">All fields marked required must be completed. This request is not confirmed until our team contacts you.</p>
         <fieldset class="form-section"><legend>Visit details</legend><div class="reservation-grid">
           <label class="reservation-field"><span>Guests — required</span><select name="guests" required><option value="" selected disabled>Choose party size</option><option value="1">1 guest</option><option value="2">2 guests</option><option value="3">3 guests</option><option value="4">4 guests</option><option value="5">5 guests</option><option value="6">6 guests</option><option value="7">7 guests</option><option value="8">8 guests</option><option value="9">9 guests</option><option value="10+">10 or more guests</option></select></label>
-          <label class="reservation-field"><span>Preferred date — required</span><input name="booking_date" type="date" required><small>For same-day requests, calling is fastest.</small></label>
-          <label class="reservation-field full"><span>Preferred arrival time — required</span><input name="booking_time" type="time" min="09:00" max="20:00" step="900" required><small>Choose your preferred time; we will confirm availability.</small></label>
+          <label class="reservation-field"><span>Preferred date — required</span><select name="booking_date" required><option value="" selected disabled>Choose a date</option></select><small>Available Tuesday–Sunday. For same-day requests, calling is fastest.</small></label>
+          <label class="reservation-field full"><span>Preferred arrival time — required</span><select name="booking_time" required><option value="" selected disabled>Choose an arrival time</option></select><small>Choose your preferred time; we will confirm availability.</small></label>
         </div></fieldset>
         <fieldset class="form-section"><legend>Your details</legend><div class="reservation-grid">
           <label class="reservation-field"><span>First name — required</span><input name="first_name" autocomplete="given-name" required></label>
@@ -85,8 +85,10 @@
   <script src="script.js"></script>
   <script>
     const reservationForm=document.querySelector('form.reservation-card');
-    const bookingDate=document.querySelector('input[name="booking_date"]');
-    if(bookingDate){const now=new Date();const localDate=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);bookingDate.min=localDate;}
+    const bookingDate=document.querySelector('select[name="booking_date"]');
+    const bookingTime=document.querySelector('select[name="booking_time"]');
+    if(bookingDate){const formatter=new Intl.DateTimeFormat('en-AU',{weekday:'short',day:'numeric',month:'short',year:'numeric'});const today=new Date();today.setHours(12,0,0,0);for(let offset=0;offset<60;offset++){const date=new Date(today);date.setDate(today.getDate()+offset);if(date.getDay()===1)continue;const value=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');bookingDate.add(new Option(formatter.format(date),value));}}
+    if(bookingTime){for(let minutes=9*60;minutes<=20*60;minutes+=15){const hours=Math.floor(minutes/60);const mins=minutes%60;const value=String(hours).padStart(2,'0')+':'+String(mins).padStart(2,'0');const display=new Intl.DateTimeFormat('en-AU',{hour:'numeric',minute:'2-digit'}).format(new Date(2000,0,1,hours,mins));bookingTime.add(new Option(display,value));}}
     if(reservationForm){reservationForm.addEventListener('submit',()=>{const submitButton=reservationForm.querySelector('.reservation-submit');const status=reservationForm.querySelector('.reservation-status');if(submitButton){submitButton.disabled=true;submitButton.classList.add('is-loading');submitButton.querySelector('strong').textContent='Sending your request…';}if(status){status.textContent='Please keep this page open while we securely send your booking.';}});}
   </script>
 </body>
