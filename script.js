@@ -63,3 +63,80 @@ revealTargets.forEach(el=>el.classList.add('reveal'));
 const showAll=()=>revealTargets.forEach(el=>el.classList.add('in-view'));
 if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('in-view');observer.unobserve(entry.target);}});},{threshold:.05,rootMargin:'0px 0px 80px 0px'});revealTargets.forEach(el=>observer.observe(el));setTimeout(showAll,900);}else{showAll();}
 window.addEventListener('pageshow',showAll);
+
+// Cinematic gallery experience
+const galleryGrid=document.querySelector('.gallery-grid');
+if(galleryGrid){
+  document.body.classList.add('gallery-page');
+  const gallerySection=galleryGrid.closest('.section');
+  const galleryWrap=galleryGrid.closest('.wrap');
+  gallerySection?.removeAttribute('style');
+  gallerySection?.classList.add('gallery-collection');
+  const galleryHeading=galleryWrap?.querySelector('h1');
+  const galleryEyebrow=galleryWrap?.querySelector('.eyebrow');
+  const galleryLede=galleryWrap?.querySelector('.lede');
+  if(galleryHeading)galleryHeading.textContent='Stories from our table';
+  if(galleryEyebrow)galleryEyebrow.textContent='Food · Family · Rosetta';
+  if(galleryLede)galleryLede.textContent='Real dishes, warm hospitality and the moments that make 52 South feel like home.';
+
+  const sourceImages=[...galleryGrid.querySelectorAll('img')];
+  const categoryFor=img=>{
+    const src=img.getAttribute('src')||'';
+    if(/interior|exterior|dining-room|venue/i.test(src))return 'restaurant';
+    if(/promo|special/i.test(src))return 'specials';
+    return 'food';
+  };
+  const hero=document.createElement('section');
+  hero.className='gallery-cinema';
+  const featured=[sourceImages[0],sourceImages[4],sourceImages[15],sourceImages[31],sourceImages[16],sourceImages[32],sourceImages[27]].filter(Boolean);
+  hero.innerHTML=`<div class="gallery-cinema-shade"></div><div class="gallery-cinema-copy"><span class="gallery-kicker">Authentic Sri Lankan flavours in Rosetta</span><img class="gallery-mark" src="assets/52-south-logo.png?v=${ASSET_VERSION}" alt="52 South"><h1>A taste of Sri Lanka,<br>made in Rosetta.</h1><p>Come for the flavour. Stay for the welcome.</p><div class="gallery-hero-actions"><a class="btn gold" href="/book-a-table/">Book a Table</a><a class="btn gallery-ghost" href="/menu/">View Our Menu</a></div></div><div class="gallery-filmstrip" aria-label="Featured moments from 52 South"></div><a class="gallery-scroll-cue" href="#gallery-stories" aria-label="Explore the gallery"><span>Explore</span><i></i></a>`;
+  const filmstrip=hero.querySelector('.gallery-filmstrip');
+  featured.forEach((img,index)=>{const frame=document.createElement('div');frame.className='gallery-frame';const clone=img.cloneNode();clone.removeAttribute('loading');clone.alt='';clone.setAttribute('aria-hidden','true');frame.appendChild(clone);if(index===Math.floor(featured.length/2)){const badge=document.createElement('span');badge.className='gallery-frame-badge';badge.textContent='52';frame.appendChild(badge);}filmstrip.appendChild(frame);});
+  gallerySection?.insertAdjacentElement('beforebegin',hero);
+  if(galleryWrap)galleryWrap.id='gallery-stories';
+
+  const filters=document.createElement('div');
+  filters.className='gallery-filters';
+  filters.setAttribute('aria-label','Filter gallery');
+  filters.innerHTML='<button class="active" type="button" data-filter="all">All moments</button><button type="button" data-filter="food">Food</button><button type="button" data-filter="restaurant">Our restaurant</button><button type="button" data-filter="specials">Specials</button>';
+  galleryGrid.insertAdjacentElement('beforebegin',filters);
+
+  const tiles=sourceImages.map((img,index)=>{
+    const tile=document.createElement('button');
+    tile.type='button';
+    tile.className='gallery-tile';
+    tile.dataset.category=categoryFor(img);
+    tile.dataset.index=String(index);
+    tile.setAttribute('aria-label',`Open image: ${img.alt}`);
+    const caption=document.createElement('span');
+    caption.textContent=img.alt.replace(/ at 52 South(?: in Rosetta)?/i,'');
+    img.parentNode.insertBefore(tile,img);
+    tile.append(img,caption);
+    return tile;
+  });
+
+  filters.addEventListener('click',event=>{
+    const button=event.target.closest('button[data-filter]');
+    if(!button)return;
+    filters.querySelectorAll('button').forEach(item=>item.classList.toggle('active',item===button));
+    tiles.forEach(tile=>{tile.hidden=button.dataset.filter!=='all'&&tile.dataset.category!==button.dataset.filter;});
+  });
+
+  const lightbox=document.createElement('div');
+  lightbox.className='gallery-lightbox';
+  lightbox.setAttribute('role','dialog');
+  lightbox.setAttribute('aria-modal','true');
+  lightbox.setAttribute('aria-label','Gallery image viewer');
+  lightbox.hidden=true;
+  lightbox.innerHTML='<button class="gallery-lightbox-close" type="button" aria-label="Close image">×</button><button class="gallery-lightbox-nav prev" type="button" aria-label="Previous image">‹</button><figure><img alt=""><figcaption></figcaption></figure><button class="gallery-lightbox-nav next" type="button" aria-label="Next image">›</button>';
+  document.body.appendChild(lightbox);
+  let activeImage=0;
+  const showImage=index=>{activeImage=(index+sourceImages.length)%sourceImages.length;const source=sourceImages[activeImage];const image=lightbox.querySelector('img');image.src=source.currentSrc||source.src;image.alt=source.alt;lightbox.querySelector('figcaption').textContent=source.alt;lightbox.hidden=false;document.body.classList.add('lightbox-open');};
+  const closeLightbox=()=>{lightbox.hidden=true;document.body.classList.remove('lightbox-open');};
+  tiles.forEach(tile=>tile.addEventListener('click',()=>showImage(Number(tile.dataset.index))));
+  lightbox.querySelector('.prev').addEventListener('click',()=>showImage(activeImage-1));
+  lightbox.querySelector('.next').addEventListener('click',()=>showImage(activeImage+1));
+  lightbox.querySelector('.gallery-lightbox-close').addEventListener('click',closeLightbox);
+  lightbox.addEventListener('click',event=>{if(event.target===lightbox)closeLightbox();});
+  document.addEventListener('keydown',event=>{if(lightbox.hidden)return;if(event.key==='Escape')closeLightbox();if(event.key==='ArrowLeft')showImage(activeImage-1);if(event.key==='ArrowRight')showImage(activeImage+1);});
+}
