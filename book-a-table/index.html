@@ -1,14 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DJDKKQMYCD"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-DJDKKQMYCD');
-  </script>
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <base href="/">
@@ -87,14 +80,7 @@
     @media(max-width:850px){.reservation-layout{grid-template-columns:1fr}.reservation-aside{position:static;display:grid;grid-template-columns:210px 1fr}.reservation-aside img{height:100%}}
     @media(max-width:650px){.reservation-hero{padding-top:128px}.reservation-layout{padding-left:13px;padding-right:13px}.reservation-card{padding:25px 18px}.reservation-grid{grid-template-columns:1fr}.reservation-field.full{grid-column:auto}.reservation-field input,.reservation-field select,.reservation-field textarea{font-size:16px}.reservation-aside{display:block}.reservation-aside img{height:190px}}
   </style>
-  <!-- Meta Pixel Code -->
-  <script>
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '1352737030376286');
-    fbq('track', 'PageView');
-  </script>
-  <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1352737030376286&ev=PageView&noscript=1" /></noscript>
-  <!-- End Meta Pixel Code -->
+
 </head>
 <body>
   <header class="site-header"><div class="wrap nav"><a class="brand" href="/"><img src="assets/52-south-logo.png" alt="52 South Cafe and Restaurant logo"><span>52 South Cafe & Restaurant</span></a><button class="menu-toggle" aria-label="Open navigation">Menu</button><nav class="navlinks"><a href="/">Home</a><a href="/menu/">Menu</a><a href="/gallery/">Gallery</a><a href="/venue-hire/">Venue Hire</a><a href="/contact/">Contact</a></nav></div></header>
@@ -160,7 +146,7 @@
       const referenceField=reservationForm.querySelector('[name="booking_reference"]');
       if(startedField)startedField.value=new Date(startedAt).toISOString();
       let interactionTracked=false;
-      reservationForm.addEventListener('focusin',()=>{if(interactionTracked)return;interactionTracked=true;if(typeof gtag==='function')gtag('event','begin_checkout',{booking_type:'table_reservation'});if(typeof fbq==='function')fbq('trackCustom','BookingFormStarted');},{once:true});
+      reservationForm.addEventListener('focusin',()=>{if(interactionTracked)return;interactionTracked=true;window.southAnalytics?.track('begin_checkout',{booking_type:'table_reservation'});window.southAnalytics?.meta('BookingFormStarted',{},true);window.southAnalytics?.tiktok('InitiateCheckout',{content_name:'Table reservation'});},{once:true});
       reservationForm.addEventListener('submit',(event)=>{
         const submitButton=reservationForm.querySelector('.reservation-submit');
         const status=reservationForm.querySelector('.reservation-status');
@@ -169,8 +155,9 @@
         const reference='52S-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
         if(referenceField)referenceField.value=reference;
         sessionStorage.setItem('lastBookingReference',reference);
-        if(typeof gtag==='function')gtag('event','booking_request_submit',{booking_reference:reference,booking_type:'table_reservation',transport_type:'beacon'});
-        if(typeof fbq==='function')fbq('trackCustom','BookingRequestSubmitted',{booking_reference:reference});
+        window.southAnalytics?.track('booking_request_submit',{booking_reference:reference,booking_type:'table_reservation',transport_type:'beacon'});
+        window.southAnalytics?.meta('BookingRequestSubmitted',{booking_reference:reference},true);
+        window.southAnalytics?.tiktok('SubmitForm',{content_name:'Table reservation'});
         if(submitButton){submitButton.disabled=true;submitButton.classList.add('is-loading');submitButton.querySelector('strong').textContent='Sending your request…';}
         if(status)status.textContent='Your request is being sent. A confirmation message will appear next.';
       });

@@ -1,11 +1,113 @@
-// Meta Pixel tracking for 52 South
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init','4099745546996426');
-fbq('track','PageView');
-if(location.pathname.replace(/\/+$/,'')==='/booking-confirmed'){fbq('track','Schedule',{content_name:'Table booking'});}
+// Consent-controlled measurement for 52 South
+const SOUTH_MEASUREMENT_ID='G-DJDKKQMYCD';
+const SOUTH_META_PIXEL_ID='1352737030376286';
+const SOUTH_TIKTOK_PIXEL_ID=''; // Add the business-owned TikTok Pixel ID after Ads Manager access is available.
+const SOUTH_CONSENT_KEY='52south-consent-v1';
+let southMeasurementLoaded=false;
+
+window.dataLayer=window.dataLayer||[];
+window.gtag=window.gtag||function(){window.dataLayer.push(arguments);};
+gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',wait_for_update:500});
+
+function southLoadScript(src,id){
+  if(id&&document.getElementById(id))return;
+  const script=document.createElement('script');
+  if(id)script.id=id;
+  script.async=true;
+  script.src=src;
+  document.head.appendChild(script);
+}
+
+function southTrack(eventName,parameters={}){
+  if(localStorage.getItem(SOUTH_CONSENT_KEY)!=='all')return;
+  gtag('event',eventName,parameters);
+}
+
+function southMetaTrack(eventName,parameters={},custom=false){
+  if(localStorage.getItem(SOUTH_CONSENT_KEY)!=='all'||typeof fbq!=='function')return;
+  fbq(custom?'trackCustom':'track',eventName,parameters);
+}
+
+function southTikTokTrack(eventName,parameters={}){
+  if(localStorage.getItem(SOUTH_CONSENT_KEY)!=='all'||!SOUTH_TIKTOK_PIXEL_ID||!window.ttq)return;
+  ttq.track(eventName,parameters);
+}
+
+function southLoadMeasurement(){
+  if(southMeasurementLoaded)return;
+  southMeasurementLoaded=true;
+  gtag('consent','update',{analytics_storage:'granted',ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted'});
+  gtag('js',new Date());
+  gtag('config',SOUTH_MEASUREMENT_ID,{anonymize_ip:true});
+  southLoadScript(`https://www.googletagmanager.com/gtag/js?id=${SOUTH_MEASUREMENT_ID}`,'south-ga4');
+
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init',SOUTH_META_PIXEL_ID);
+  fbq('consent','grant');
+  fbq('track','PageView');
+
+  if(SOUTH_TIKTOK_PIXEL_ID){
+    !function(w,d,t){w.TiktokAnalyticsObject=t;const ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie','holdConsent','revokeConsent','grantConsent'];ttq.setAndDefer=function(o,m){o[m]=function(){o.push([m].concat([].slice.call(arguments,0)));};};for(let i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.load=function(id){const s=d.createElement('script');s.async=true;s.src='https://analytics.tiktok.com/i18n/pixel/events.js?sdkid='+id+'&lib='+t;const x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};ttq.load(SOUTH_TIKTOK_PIXEL_ID);ttq.grantConsent();ttq.page();}(window,document,'ttq');
+  }
+  southTrackPagePurpose();
+}
+
+function southTrackPagePurpose(){
+  const path=location.pathname.replace(/\/+$/,'')||'/';
+  if(path==='/menu'||path==='/menu.html'){
+    southTrack('view_menu',{page_type:'restaurant_menu'});
+    southMetaTrack('ViewContent',{content_name:'52 South menu',content_category:'Restaurant menu'});
+    southTikTokTrack('ViewContent',{content_name:'52 South menu',content_type:'product_group'});
+  }
+}
+
+function southSetConsent(choice){
+  localStorage.setItem(SOUTH_CONSENT_KEY,choice);
+  document.querySelector('.cookie-consent')?.remove();
+  if(choice==='all')southLoadMeasurement();
+  else{
+    gtag('consent','update',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});
+    if(typeof fbq==='function')fbq('consent','revoke');
+    if(window.ttq?.revokeConsent)ttq.revokeConsent();
+  }
+}
+
+function southShowConsent(){
+  document.querySelector('.cookie-consent')?.remove();
+  const banner=document.createElement('section');
+  banner.className='cookie-consent';
+  banner.setAttribute('role','dialog');
+  banner.setAttribute('aria-label','Cookie choices');
+  banner.innerHTML='<div><strong>Your privacy choices</strong><p>We use optional analytics and advertising cookies to measure bookings, menu views, calls and ordering clicks. You can accept them or continue with essential website features only. <a href="/privacy/">Privacy information</a></p></div><div class="cookie-actions"><button type="button" data-consent="essential">Essential only</button><button class="cookie-accept" type="button" data-consent="all">Accept analytics & ads</button></div>';
+  banner.addEventListener('click',event=>{const choice=event.target.closest('[data-consent]')?.dataset.consent;if(choice)southSetConsent(choice);});
+  document.body.appendChild(banner);
+}
+
+const southSavedConsent=localStorage.getItem(SOUTH_CONSENT_KEY);
+if(southSavedConsent==='all')southLoadMeasurement();
+else if(!southSavedConsent)window.addEventListener('DOMContentLoaded',southShowConsent,{once:true});
+
+window.southAnalytics={track:southTrack,meta:southMetaTrack,tiktok:southTikTokTrack,showConsent:southShowConsent};
 
 const btn=document.querySelector('.menu-toggle');
 const nav=document.querySelector('.navlinks');
+
+document.addEventListener('click',event=>{
+  const link=event.target.closest('a[href]');
+  if(!link)return;
+  const href=link.href||'';
+  if(href.startsWith('tel:')){
+    southTrack('click_to_call',{link_url:href,link_text:link.textContent.trim()});
+    southMetaTrack('Contact',{contact_method:'phone'});
+    southTikTokTrack('Contact',{contact_method:'phone'});
+  }else if(/ubereats\.com/i.test(href)){
+    southTrack('order_online_click',{provider:'Uber Eats',link_url:href});
+    southMetaTrack('InitiateCheckout',{content_name:'Uber Eats order'});
+    southTikTokTrack('InitiateCheckout',{content_name:'Uber Eats order'});
+  }else if(/\/book-a-table\/?(?:$|[?#])/i.test(href)&&!location.pathname.startsWith('/book-a-table')){
+    southTrack('booking_cta_click',{link_url:href,link_text:link.textContent.trim()});
+  }
+});
 if(btn){
   btn.setAttribute('aria-label','Open navigation');
   btn.innerHTML='<span class="hamburger-line"></span><span class="hamburger-line"></span><span class="hamburger-line"></span>';
@@ -42,6 +144,8 @@ const waIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
 if(nav&&!nav.querySelector('.nav-socials')){const socialWrap=document.createElement('div');socialWrap.className='nav-socials';socialWrap.innerHTML=`<a class="social-icon" href="${FACEBOOK_URL}" target="_blank" rel="noopener" aria-label="52 South on Facebook">${fbIcon}</a><a class="social-icon" href="${INSTAGRAM_URL}" target="_blank" rel="noopener" aria-label="52 South on Instagram">${igIcon}</a><a class="social-icon" href="${WHATSAPP_URL}" target="_blank" rel="noopener" aria-label="Message 52 South on WhatsApp">${waIcon}</a>`;nav.appendChild(socialWrap);}
 const footerExplore=document.querySelector('.footer-grid > div:last-child p');
 if(footerExplore&&!footerExplore.querySelector('a[href="/privacy/"]'))footerExplore.insertAdjacentHTML('beforeend','<br><a href="/privacy/">Privacy</a>');
+const footerLast=document.querySelector('.footer-grid > div:last-child');
+if(footerLast&&!footerLast.querySelector('.cookie-settings-button')){const settingsButton=document.createElement('button');settingsButton.type='button';settingsButton.className='cookie-settings-button';settingsButton.textContent='Cookie settings';settingsButton.addEventListener('click',southShowConsent);footerLast.appendChild(settingsButton);}
 if(!document.querySelector('.mobile-contact-bar')){const contactBar=document.createElement('nav');contactBar.className='mobile-contact-bar';contactBar.setAttribute('aria-label','Quick contact');contactBar.innerHTML=`<a href="tel:+61492144209">Call</a><a href="${WHATSAPP_URL}" target="_blank" rel="noopener">WhatsApp</a><a href="/book-a-table/">Book</a>`;document.body.appendChild(contactBar);}
 if(!document.getElementById('brand-social-fixes')){const style=document.createElement('style');style.id='brand-social-fixes';style.textContent=`
 .brand img{border-radius:50%!important;overflow:hidden}.brand span{font-size:.92rem;letter-spacing:.035em;text-transform:none}.nav-socials{display:flex;gap:8px;align-items:center}.social-icon{width:34px;height:34px;border:1px solid #3a3a3a;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#f7f5f0}.social-icon svg{width:19px;height:19px}
@@ -49,6 +153,7 @@ if(!document.getElementById('brand-social-fixes')){const style=document.createEl
 .hero .actions{perspective:950px;gap:16px}.hero .actions .btn{position:relative;overflow:hidden;border-radius:16px;padding:15px 24px;transform-style:preserve-3d;box-shadow:0 9px 0 rgba(0,0,0,.34),0 18px 34px rgba(0,0,0,.30),inset 0 1px rgba(255,255,255,.38);transition:transform .22s ease,box-shadow .22s ease,filter .22s ease}.hero .actions .btn:before{content:"";position:absolute;left:8px;right:8px;top:5px;height:42%;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0));pointer-events:none}.hero .actions .btn:hover{transform:translateY(-7px) rotateX(4deg);box-shadow:0 14px 0 rgba(0,0,0,.32),0 28px 44px rgba(0,0,0,.40),inset 0 1px rgba(255,255,255,.45);filter:brightness(1.05)}.hero .actions .btn:active{transform:translateY(2px) scale(.985);box-shadow:0 3px 0 rgba(0,0,0,.32),0 8px 16px rgba(0,0,0,.25)}.hero .actions .btn.primary{background:linear-gradient(145deg,#fff,#dcdcdc);border-color:#fff;color:#111}.hero .actions .btn.gold{background:linear-gradient(145deg,#f1d083,#c79d4e);border-color:#edca77;color:#111}.hero .actions .btn:not(.primary):not(.gold){background:linear-gradient(145deg,rgba(30,30,30,.96),rgba(7,7,7,.98));border-color:rgba(255,255,255,.72);color:#fff;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 @media(max-width:800px){.brand span{font-size:.78rem;line-height:1.15;max-width:175px}.menu-toggle{width:46px;height:46px}.hero .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hero .actions .btn{text-align:center;padding:14px 12px;border-radius:14px;box-shadow:0 7px 0 rgba(0,0,0,.32),0 14px 24px rgba(0,0,0,.28)}.hero .actions .btn:hover{transform:none}.hero .actions .btn:active{transform:translateY(3px) scale(.98);box-shadow:0 3px 0 rgba(0,0,0,.30),0 7px 14px rgba(0,0,0,.22)}}
 .mobile-contact-bar{display:none}@media(max-width:800px){body{padding-bottom:64px}.mobile-contact-bar{position:fixed;z-index:9999;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);background:#0d0d0d;border-top:1px solid #3a3a3a;box-shadow:0 -8px 24px rgba(0,0,0,.35)}.mobile-contact-bar a{padding:15px 8px;text-align:center;color:#fff;text-decoration:none;font-weight:800;border-right:1px solid #333}.mobile-contact-bar a:last-child{border-right:0;background:#d9c277;color:#111}}
+.cookie-consent{position:fixed;z-index:10050;left:18px;right:18px;bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:24px;max-width:980px;margin:auto;padding:20px 22px;border:1px solid #575047;border-radius:18px;background:rgba(13,13,13,.98);color:#f7f5f0;box-shadow:0 24px 70px rgba(0,0,0,.65);font-family:Arial,sans-serif}.cookie-consent strong{display:block;font-size:1.05rem}.cookie-consent p{max-width:650px;margin:6px 0 0;color:#c9c5bd;font-size:.88rem;line-height:1.5}.cookie-consent a{color:#ead08d}.cookie-actions{display:flex;gap:10px;flex:0 0 auto}.cookie-actions button,.cookie-settings-button{border:1px solid #6a645b;border-radius:10px;background:#171717;color:#fff;padding:11px 14px;font:700 .82rem Arial,sans-serif;cursor:pointer}.cookie-actions .cookie-accept{background:#d9c277;border-color:#d9c277;color:#111}.cookie-settings-button{margin-top:8px;padding:8px 11px;color:#d8d3c9}.cookie-actions button:focus-visible,.cookie-settings-button:focus-visible{outline:3px solid #fff;outline-offset:2px}@media(max-width:720px){.cookie-consent{bottom:76px;display:block;padding:18px}.cookie-actions{display:grid;grid-template-columns:1fr;margin-top:14px}.cookie-actions button{min-height:46px}}
 `;document.head.appendChild(style);}
 
 const homeHero=document.querySelector('.hero');
