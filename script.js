@@ -20,7 +20,7 @@ function southLoadScript(src,id){
 
 function southTrack(eventName,parameters={}){
   if(localStorage.getItem(SOUTH_CONSENT_KEY)!=='all')return;
-  gtag('event',eventName,parameters);
+  gtag('event',eventName,{...parameters,send_to:SOUTH_MEASUREMENT_ID,transport_type:'beacon'});
 }
 
 function southMetaTrack(eventName,parameters={},custom=false){
