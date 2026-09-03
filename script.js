@@ -92,22 +92,29 @@ window.southAnalytics={track:southTrack,meta:southMetaTrack,tiktok:southTikTokTr
 const btn=document.querySelector('.menu-toggle');
 const nav=document.querySelector('.navlinks');
 
-document.addEventListener('click',event=>{
+const southTrackedOutboundClicks=new WeakMap();
+function southTrackOutboundClick(event){
   const link=event.target.closest('a[href]');
   if(!link)return;
+  const now=Date.now();
+  if(now-(southTrackedOutboundClicks.get(link)||0)<1500)return;
   const href=link.href||'';
   if(href.startsWith('tel:')){
+    southTrackedOutboundClicks.set(link,now);
     southTrack('click_to_call',{link_url:href,link_text:link.textContent.trim()});
     southMetaTrack('Contact',{contact_method:'phone'});
     southTikTokTrack('Contact',{contact_method:'phone'});
   }else if(/ubereats\.com/i.test(href)){
+    southTrackedOutboundClicks.set(link,now);
     southTrack('order_online_click',{provider:'Uber Eats',link_url:href});
     southMetaTrack('InitiateCheckout',{content_name:'Uber Eats order'});
     southTikTokTrack('InitiateCheckout',{content_name:'Uber Eats order'});
-  }else if(/\/book-a-table\/?(?:$|[?#])/i.test(href)&&!location.pathname.startsWith('/book-a-table')){
+  }else if(event.type==='click'&&/\/book-a-table\/?(?:$|[?#])/i.test(href)&&!location.pathname.startsWith('/book-a-table')){
     southTrack('booking_cta_click',{link_url:href,link_text:link.textContent.trim()});
   }
-});
+}
+document.addEventListener('pointerdown',southTrackOutboundClick,true);
+document.addEventListener('click',southTrackOutboundClick,true);
 if(btn){
   btn.setAttribute('aria-label','Open navigation');
   btn.innerHTML='<span class="hamburger-line"></span><span class="hamburger-line"></span><span class="hamburger-line"></span>';
