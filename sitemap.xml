@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://52south.au/</loc><lastmod>2026-09-03</lastmod></url>
-  <url><loc>https://52south.au/menu/</loc><lastmod>2026-09-03</lastmod></url>
+  <url><loc>https://52south.au/menu/</loc><lastmod>2026-09-04</lastmod></url>
   <url><loc>https://52south.au/gallery/</loc><lastmod>2026-09-03</lastmod></url>
   <url><loc>https://52south.au/venue-hire/</loc></url>
   <url><loc>https://52south.au/contact/</loc></url>
@@ -11,9 +11,9 @@
   <url><loc>https://52south.au/sri-lankan-restaurant-hobart.html</loc></url>
   <url><loc>https://52south.au/rice-and-curry-hobart.html</loc></url>
   <url><loc>https://52south.au/hoppers-hobart.html</loc></url>
-  <url><loc>https://52south.au/kottu-hobart.html</loc></url>
-  <url><loc>https://52south.au/restaurant-rosetta.html</loc></url>
-  <url><loc>https://52south.au/sri-lankan-takeaway-hobart.html</loc></url>
-  <url><loc>https://52south.au/sri-lankan-catering-hobart.html</loc></url>
+  <url><loc>https://52south.au/kottu-hobart.html</loc><lastmod>2026-09-04</lastmod></url>
+  <url><loc>https://52south.au/restaurant-rosetta.html</loc><lastmod>2026-09-04</lastmod></url>
+  <url><loc>https://52south.au/sri-lankan-takeaway-hobart.html</loc><lastmod>2026-09-04</lastmod></url>
+  <url><loc>https://52south.au/sri-lankan-catering-hobart.html</loc><lastmod>2026-09-04</lastmod></url>
   <url><loc>https://52south.au/guide-to-sri-lankan-food.html</loc></url>
 </urlset>
