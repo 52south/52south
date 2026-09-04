@@ -122,7 +122,7 @@
         <fieldset class="form-section"><legend>Visit details</legend><div class="reservation-grid">
           <label class="reservation-field"><span>Guests — required</span><select name="guests" required><option value="" selected disabled>Choose party size</option><option value="1">1 guest</option><option value="2">2 guests</option><option value="3">3 guests</option><option value="4">4 guests</option><option value="5">5 guests</option><option value="6">6 guests</option><option value="7">7 guests</option><option value="8">8 guests</option><option value="9">9 guests</option><option value="10+">10 or more guests</option></select></label>
           <label class="reservation-field"><span>Preferred date — required</span><select name="booking_date" required><option value="" selected disabled>Choose a date</option></select><small>Available Tuesday–Sunday. For same-day requests, calling is fastest.</small></label>
-          <label class="reservation-field full"><span>Preferred arrival time — required</span><select name="booking_time" required><option value="" selected disabled>Choose an arrival time</option></select><small>Choose your preferred time; we will confirm availability.</small></label>
+          <label class="reservation-field full"><span>Preferred arrival time — required</span><select name="booking_time" required><option value="" selected disabled>Choose a date first</option></select><small>Times are in Hobart local time. Last listed arrival is 7:45 pm; we close at 8 pm, so late arrivals have a shorter sitting. We will confirm availability.</small></label>
         </div></fieldset>
         <fieldset class="form-section"><legend>Your details</legend><div class="reservation-grid">
           <label class="reservation-field"><span>First name — required</span><input name="first_name" autocomplete="given-name" required></label>
@@ -149,12 +149,37 @@
 </div>
 </footer>
   <script src="script.js"></script>
+  <script src="/assets/booking-availability.js"></script>
   <script>
     const reservationForm=document.querySelector('form.reservation-card');
     const bookingDate=document.querySelector('select[name="booking_date"]');
     const bookingTime=document.querySelector('select[name="booking_time"]');
-    if(bookingDate){const formatter=new Intl.DateTimeFormat('en-AU',{weekday:'short',day:'numeric',month:'short',year:'numeric'});const today=new Date();today.setHours(12,0,0,0);for(let offset=0;offset<60;offset++){const date=new Date(today);date.setDate(today.getDate()+offset);if(date.getDay()===1)continue;const value=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');bookingDate.add(new Option(formatter.format(date),value));}}
-    if(bookingTime){for(let minutes=9*60;minutes<=20*60;minutes+=15){const hours=Math.floor(minutes/60);const mins=minutes%60;const value=String(hours).padStart(2,'0')+':'+String(mins).padStart(2,'0');const display=new Intl.DateTimeFormat('en-AU',{hour:'numeric',minute:'2-digit'}).format(new Date(2000,0,1,hours,mins));bookingTime.add(new Option(display,value));}}
+    const availability=window.southBookingAvailability;
+    function refreshAvailability(){
+      const date=bookingDate.value,time=bookingTime.value;
+      const formatter=new Intl.DateTimeFormat('en-AU',{timeZone:'UTC',weekday:'short',day:'numeric',month:'short',year:'numeric'});
+      bookingDate.replaceChildren(new Option('Choose a date',''));
+      bookingDate.options[0].disabled=true;
+      availability.dates().forEach(value=>bookingDate.add(new Option(formatter.format(new Date(value+'T12:00:00Z')),value)));
+      bookingDate.value=availability.dates().includes(date)?date:'';
+      bookingTime.replaceChildren(new Option(bookingDate.value?'Choose an arrival time':'Choose a date first',''));
+      bookingTime.options[0].disabled=true;
+      availability.times(bookingDate.value).forEach(value=>{
+        const [hour,minute]=value.split(':').map(Number);
+        bookingTime.add(new Option(`${hour%12||12}:${String(minute).padStart(2,'0')} ${hour<12?'am':'pm'}`,value));
+      });
+      bookingTime.value=availability.valid(bookingDate.value,time)?time:'';
+    }
+    refreshAvailability();
+    bookingDate.addEventListener('change',refreshAvailability);
+    bookingTime.addEventListener('focus',refreshAvailability);
+    window.addEventListener('pageshow',()=>{
+      refreshAvailability();
+      const button=reservationForm.querySelector('.reservation-submit');
+      button.disabled=false;button.classList.remove('is-loading');
+      button.querySelector('strong').textContent='Send reservation request';
+    });
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAvailability();});
     if(reservationForm){
       const startedAt=Date.now();
       const startedField=reservationForm.querySelector('[name="form_started_at"]');
@@ -166,10 +191,15 @@
         const submitButton=reservationForm.querySelector('.reservation-submit');
         const status=reservationForm.querySelector('.reservation-status');
         const honey=reservationForm.querySelector('[name="_honey"]');
+        if(!availability.valid(bookingDate.value,bookingTime.value)){
+          event.preventDefault();refreshAvailability();
+          if(status)status.textContent='That arrival time is no longer available. Please choose a future date and time (Hobart local time).';
+          bookingTime.focus();return;
+        }
         if((honey&&honey.value)||Date.now()-startedAt<2500){event.preventDefault();if(status)status.textContent='Please review your booking details, then press Send reservation request again.';return;}
         const reference='52S-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
         if(referenceField)referenceField.value=reference;
-        sessionStorage.setItem('lastBookingReference',reference);
+        try{sessionStorage.setItem('lastBookingReference',reference);}catch(error){/* Storage restrictions must not block the form. */}
         window.southAnalytics?.track('booking_request_submit',{booking_reference:reference,booking_type:'table_reservation',transport_type:'beacon'});
         window.southAnalytics?.meta('BookingRequestSubmitted',{booking_reference:reference},true);
         window.southAnalytics?.tiktok('SubmitForm',{content_name:'Table reservation'});

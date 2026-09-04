@@ -1,0 +1,15 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const a=require('../assets/booking-availability.js');
+test('Hobart time, not visitor timezone',()=>assert.deepEqual(a.local(new Date('2026-09-04T08:00:00Z')),{date:'2026-09-04',minutes:1080}));
+test('past and current minutes excluded',()=>assert.equal(a.times('2026-09-04',new Date('2026-09-04T08:00:00Z'))[0],'18:15'));
+test('closing time excluded; last arrival 19:45',()=>assert.equal(a.times('2026-09-05',new Date('2026-09-04T08:00:00Z')).at(-1),'19:45'));
+test('today removed at last arrival',()=>assert.ok(!a.dates(new Date('2026-09-04T09:45:00Z')).includes('2026-09-04')));
+test('Monday closed',()=>assert.deepEqual(a.times('2026-09-07',new Date('2026-09-04T08:00:00Z')),[]));
+test('past date and outside 60-day window rejected',()=>{const n=new Date('2026-09-04T08:00:00Z');assert.deepEqual(a.times('2026-09-03',n),[]);assert.deepEqual(a.times('2027-01-01',n),[]);});
+test('DST summer time',()=>assert.deepEqual(a.local(new Date('2026-12-04T08:00:00Z')),{date:'2026-12-04',minutes:1140}));
+test('Hobart midnight rollover',()=>assert.equal(a.local(new Date('2026-09-04T14:01:00Z')).date,'2026-09-05'));
+test('stale selection rejected',()=>assert.equal(a.valid('2026-09-04','18:15',new Date('2026-09-04T08:16:00Z')),false));
+test('mobile link resolves to booking form despite base',()=>assert.ok(fs.readFileSync('script.js','utf8').includes('href="/book-a-table/#reservation-form"')));
+test('email POST retains customer receipt and CAPTCHA',()=>{const h=fs.readFileSync('book-a-table/index.html','utf8');assert.ok(h.includes('action="https://formsubmit.co/52south.au@gmail.com" method="POST"'));assert.ok(h.includes('name="_autoresponse"'));assert.ok(h.includes('name="email" type="email"'));assert.ok(!h.includes('name="_captcha" value="false"'));});
