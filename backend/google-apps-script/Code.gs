@@ -5,6 +5,7 @@ const CONFIG = Object.freeze({
   website: 'https://52south.au',
   phone: '0492 144 209'
 });
+const BOOKING_HEADERS = Object.freeze(['Received (Hobart)','Booking date','Booking time','Guests','First name','Last name','Mobile','Email','Dietary / occasion','Terms accepted','Source','Status','Reference','Delivery']);
 
 function doGet() {
   return response('52 South booking service', 'The reservation service is ready. Return to the booking page to request a table.');
@@ -25,10 +26,11 @@ function doPost(e) {
     const reference = /^52S-[A-Z0-9-]{6,30}$/.test(p.booking_reference || '') ? p.booking_reference : makeReference();
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
-    let sheet;
+    let sheet, row;
     try {
       sheet = bookingSheet();
-      sheet.appendRow([new Date(), reference, 'RECEIVED', clean(p.booking_date), clean(p.booking_time), clean(p.guests), clean(p.first_name), clean(p.last_name), clean(p.phone), clean(p.email), clean(p.notes), 'Accepted', 'PENDING']);
+      sheet.appendRow([new Date(), clean(p.booking_date), clean(p.booking_time), clean(p.guests), clean(p.first_name), clean(p.last_name), clean(p.phone), clean(p.email), clean(p.notes), 'Accepted', clean(p.booking_source || '52south.au reservation page'), 'New', reference, 'PENDING']);
+      row = sheet.getLastRow();
     } finally { lock.releaseLock(); }
 
     const details = bookingDetails(p, reference);
@@ -43,9 +45,9 @@ function doPost(e) {
         body: customerReceipt(p, reference, false), htmlBody: customerReceipt(p, reference, true),
         replyTo: CONFIG.restaurantEmail, name: '52 South Cafe & Restaurant'
       });
-      sheet.getRange(sheet.getLastRow(), 13).setValue('EMAILS_SENT');
+      sheet.getRange(row, 14).setValue('EMAILS_SENT');
     } catch (mailError) {
-      sheet.getRange(sheet.getLastRow(), 13).setValue('EMAIL_FAILED: ' + clean(mailError.message));
+      sheet.getRange(row, 14).setValue('EMAIL_FAILED: ' + clean(mailError.message));
       return response('Your request was saved, but email delivery failed', 'Please call ' + CONFIG.phone + ' and quote ' + reference + '.', reference);
     }
     return response('Reservation request received', 'Check your inbox for a receipt. Your table is confirmed only when our team replies.', reference, CONFIG.website + '/booking-confirmed/');
@@ -84,7 +86,33 @@ function bookingSheet() {
     sheet.appendRow(['Received (Hobart)','Reference','Status','Date','Time','Guests','First name','Last name','Phone','Email','Notes','Terms','Delivery']);
     sheet.setFrozenRows(1);
   }
-  return spreadsheet.getSheetByName('Bookings');
+  spreadsheet.setSpreadsheetTimeZone(CONFIG.timezone);
+  const sheet = spreadsheet.getSheetByName('Bookings');
+  migrateBookingSheet(sheet);
+  return sheet;
+}
+
+function migrateBookingSheet(sheet) {
+  if (!sheet) throw new Error('Booking sheet is unavailable.');
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(BOOKING_HEADERS);
+    sheet.setFrozenRows(1);
+    return;
+  }
+  const lastRow = sheet.getLastRow();
+  const values = sheet.getRange(1, 1, lastRow, 14).getValues();
+  if (values[0][0] !== 'Received (Hobart)' || values[0][1] !== 'Booking date') throw new Error('Unexpected booking sheet structure.');
+  sheet.getRange(1, 1, 1, 14).setValues([BOOKING_HEADERS]);
+  for (let index = 1; index < values.length; index++) {
+    const row = values[index];
+    if (/^52S-/.test(String(row[1])) && row[2] === 'RECEIVED') {
+      sheet.getRange(index + 1, 1, 1, 14).setValues([[
+        row[0], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11],
+        '52south.au reservation page', 'New', row[1], row[12]
+      ]]);
+    }
+  }
+  sheet.setFrozenRows(1);
 }
 
 function makeReference() {
