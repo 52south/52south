@@ -6,6 +6,10 @@ const CONFIG = Object.freeze({
   phone: '0492 144 209'
 });
 
+function doGet() {
+  return response('52 South booking service', 'The reservation service is ready. Return to the booking page to request a table.');
+}
+
 function doPost(e) {
   try {
     const p = (e && e.parameter) || {};
@@ -58,7 +62,7 @@ function validateAvailability(date, time) {
   const lastDate = Utilities.formatDate(max, CONFIG.timezone, 'yyyy-MM-dd');
   if (date < today || date > lastDate) throw new Error('The selected date is no longer available.');
   const noon = Utilities.parseDate(date + ' 12:00', CONFIG.timezone, 'yyyy-MM-dd HH:mm');
-  if (Number(Utilities.formatDate(noon, CONFIG.timezone, 'u')) === 1) throw new Error('The restaurant is closed on Mondays.');
+  if (Utilities.formatDate(noon, CONFIG.timezone, 'EEE') === 'Mon') throw new Error('The restaurant is closed on Mondays.');
   const minutes = Number(time.slice(0,2)) * 60 + Number(time.slice(3));
   if (minutes < 540 || minutes > 1185 || minutes % 15) throw new Error('The selected arrival time is outside booking hours.');
   if (date === today) {
