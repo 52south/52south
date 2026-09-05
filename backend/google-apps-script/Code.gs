@@ -29,8 +29,7 @@ function doPost(e) {
     let sheet, row;
     try {
       sheet = bookingSheet();
-      sheet.appendRow([new Date(), clean(p.booking_date), clean(p.booking_time), clean(p.guests), clean(p.first_name), clean(p.last_name), clean(p.phone), clean(p.email), clean(p.notes), 'Accepted', clean(p.booking_source || '52south.au reservation page'), 'New', reference, 'PENDING']);
-      row = sheet.getLastRow();
+      row = appendBookingRow(sheet, p, reference);
     } finally { lock.releaseLock(); }
 
     const details = bookingDetails(p, reference);
@@ -106,6 +105,7 @@ function migrateBookingSheet(sheet) {
   for (let index = 1; index < values.length; index++) {
     const row = values[index];
     if (/^52S-/.test(String(row[1])) && row[2] === 'RECEIVED') {
+      formatBookingRow(sheet, index + 1);
       sheet.getRange(index + 1, 1, 1, 14).setValues([[
         row[0], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11],
         '52south.au reservation page', 'New', row[1], row[12]
@@ -113,6 +113,22 @@ function migrateBookingSheet(sheet) {
     }
   }
   sheet.setFrozenRows(1);
+}
+
+function appendBookingRow(sheet, p, reference) {
+  const row = sheet.getLastRow() + 1;
+  formatBookingRow(sheet, row);
+  sheet.getRange(row, 1, 1, 14).setValues([[
+    new Date(), clean(p.booking_date), clean(p.booking_time), clean(p.guests), clean(p.first_name), clean(p.last_name),
+    clean(p.phone), clean(p.email), clean(p.notes), 'Accepted', clean(p.booking_source || '52south.au reservation page'),
+    'New', reference, 'PENDING'
+  ]]);
+  return row;
+}
+
+function formatBookingRow(sheet, row) {
+  sheet.getRange(row, 1, 1, 14).setNumberFormat('@');
+  sheet.getRange(row, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
 }
 
 function makeReference() {
