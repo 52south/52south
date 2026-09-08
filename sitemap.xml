@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url><loc>https://52south.au/</loc><lastmod>2026-09-03</lastmod></url>
   <url><loc>https://52south.au/menu/</loc><lastmod>2026-09-04</lastmod></url>
   <url><loc>https://52south.au/gallery/</loc><lastmod>2026-09-03</lastmod></url>
-  <url><loc>https://52south.au/venue-hire/</loc></url>
+  <url>
+    <loc>https://52south.au/venue-hire/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <video:video>
+      <video:thumbnail_loc>https://52south.au/assets/52-south-interior-wide.webp</video:thumbnail_loc>
+      <video:title>Inside 52 South Cafe &amp; Restaurant - Venue Tour</video:title>
+      <video:description>Watch a video tour inside 52 South Cafe &amp; Restaurant in Rosetta, Tasmania, and discover the dining space available for private functions and celebrations.</video:description>
+      <video:content_loc>https://52south.au/assets/52-south-venue-best-quality.mp4</video:content_loc>
+      <video:publication_date>2026-08-26T14:44:01+10:00</video:publication_date>
+    </video:video>
+  </url>
   <url><loc>https://52south.au/contact/</loc></url>
   <url><loc>https://52south.au/book-a-table/</loc><lastmod>2026-09-03</lastmod></url>
   <url><loc>https://52south.au/loyalty/</loc></url>
