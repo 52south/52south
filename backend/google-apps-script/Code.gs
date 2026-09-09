@@ -4,9 +4,7 @@ const CONFIG = Object.freeze({
   timezone: 'Australia/Hobart',
   website: 'https://52south.au',
   phone: '0492 144 209',
-  spinDays: Object.freeze(['Wed','Sat']),
-  spinStartMinutes: 9 * 60,
-  spinEndMinutes: 19 * 60 + 30,
+  maxSpinsPerWeek: 2,
   spinInviteDays: 14,
   prizeExpiryHours: 24
 });
@@ -114,7 +112,8 @@ function registerMember(p) {
     MailApp.sendEmail({
       to: email,
       subject: 'Welcome to 52 South Rewards — ' + memberId,
-      body: 'Welcome to 52 South Rewards.\n\nYour member ID is '+memberId+'.\n\nYour one-time Welcome Wheel link:\n'+spinLink+'\n\nThe wheel opens Wednesdays and Saturdays from 9:00 am to 7:30 pm Hobart time. Your invitation is available for 14 days. Any prize must be redeemed in person within 24 hours. Members must be 21 or older.\n\nTerms: '+CONFIG.website+'/rewards-terms/\n\nWe will use your details to administer your membership and send member news and offers. You can unsubscribe at any time by replying to this email.\n\n52 South Cafe & Restaurant\n'+CONFIG.phone,
+      body: wheelEmailText(memberId, spinLink),
+      htmlBody: wheelEmailHtml(memberId, spinLink),
       replyTo: CONFIG.restaurantEmail,
       name: '52 South Cafe & Restaurant'
     });
@@ -161,7 +160,8 @@ function requestSpinAccess(p) {
     MailApp.sendEmail({
       to: storedEmail,
       subject: 'Your private 52 South Welcome Wheel link',
-      body: 'Here is your private, one-time Welcome Wheel link:\n\n'+spinLink+'\n\nThe wheel opens Wednesdays and Saturdays from 9:00 am to 7:30 pm Hobart time. The invitation is available for 14 days. Any prize must be redeemed in person within 24 hours.\n\nDo not forward this link. Terms: '+CONFIG.website+'/rewards-terms/\n\n52 South Cafe & Restaurant\n'+CONFIG.phone,
+      body: wheelEmailText(memberId, spinLink),
+      htmlBody: wheelEmailHtml(memberId, spinLink),
       replyTo: CONFIG.restaurantEmail,
       name: '52 South Cafe & Restaurant'
     });
@@ -209,10 +209,10 @@ function prizeSheet() { return managedSheet('Prize Wins', PRIZE_HEADERS); }
 
 function createSpinAccess(memberId) {
   const sheet = spinAccessSheet();
+  if (spinsThisWeek(memberId) >= CONFIG.maxSpinsPerWeek) return '';
   const lastRow = sheet.getLastRow();
   if (lastRow >= 2) {
     const values = sheet.getRange(2, 1, lastRow - 1, SPIN_ACCESS_HEADERS.length).getDisplayValues();
-    if (values.some(row => row[1] === memberId && row[3] === 'SPUN')) return '';
     values.forEach((row, index) => {
       if (row[1] === memberId && row[3] === 'ACTIVE') sheet.getRange(index + 2, 4).setValue('REPLACED');
     });
@@ -245,22 +245,31 @@ function findSpinAccess(token) {
   return null;
 }
 
-function spinWindowStatus(now) {
+function mondayDate(now) {
   const date = now || new Date();
+  const localDate = Utilities.formatDate(date, CONFIG.timezone, 'yyyy-MM-dd');
   const day = Utilities.formatDate(date, CONFIG.timezone, 'EEE');
-  const minutes = Number(Utilities.formatDate(date, CONFIG.timezone, 'H')) * 60 + Number(Utilities.formatDate(date, CONFIG.timezone, 'm'));
-  return {open: CONFIG.spinDays.indexOf(day) !== -1 && minutes >= CONFIG.spinStartMinutes && minutes <= CONFIG.spinEndMinutes, day:day, minutes:minutes};
+  const dayOffset = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].indexOf(day);
+  const localNoon = Utilities.parseDate(localDate + ' 12:00', CONFIG.timezone, 'yyyy-MM-dd HH:mm');
+  return Utilities.formatDate(new Date(localNoon.getTime() - Math.max(dayOffset, 0) * 86400000), CONFIG.timezone, 'yyyy-MM-dd');
+}
+
+function spinsThisWeek(memberId, now) {
+  const sheet = prizeSheet();
+  if (sheet.getLastRow() < 2) return 0;
+  const weekStart = mondayDate(now);
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, PRIZE_HEADERS.length).getValues();
+  return values.filter(row => row[1] === memberId && row[0] instanceof Date && Utilities.formatDate(row[0], CONFIG.timezone, 'yyyy-MM-dd') >= weekStart).length;
 }
 
 function spinPage(token) {
   const access = findSpinAccess(token);
   if (!access || access.values[3] !== 'ACTIVE') return privatePage('Welcome Wheel unavailable', 'This private link is invalid or has already been used.');
   if (new Date(access.values[4]).getTime() < Date.now()) return privatePage('Invitation expired', 'This Welcome Wheel invitation has expired. Please contact 52 South if you need help.');
-  const windowStatus = spinWindowStatus();
-  if (!windowStatus.open) return privatePage('The wheel is resting', 'Come back Wednesday or Saturday between 9:00 am and 7:30 pm Hobart time. Your private link will work until its invitation expiry date.');
+  if (spinsThisWeek(access.values[1]) >= CONFIG.maxSpinsPerWeek) return privatePage('Weekly spins used', 'You have used both Welcome Wheel spins for this week. Your allowance resets every Monday in Hobart.');
   const safeToken = escapeHtml(token);
   const segments = PRIZES.map(prize => '<span>'+escapeHtml(prize.name)+'</span>').join('');
-  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Welcome Wheel</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>Your Welcome Wheel</h1><p>One spin. Every spin wins. Your prize must be used within 24 hours.</p><div class="pointer">▼</div><div class="wheel">'+segments+'</div><form method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="welcome_spin"><input type="hidden" name="token" value="'+safeToken+'"><button type="submit">Spin my wheel</button></form><small>Members 21+ · Wednesdays and Saturdays · <a href="'+CONFIG.website+'/rewards-terms/">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Welcome Wheel</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>Your Welcome Wheel</h1><p>Members can spin twice each week. Every spin wins and each prize must be used within 24 hours.</p><div class="pointer">▼</div><div class="wheel">'+segments+'</div><form method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="welcome_spin"><input type="hidden" name="token" value="'+safeToken+'"><button type="submit">Spin my wheel</button></form><small>Members 21+ · Weekly allowance resets Monday · <a href="'+CONFIG.website+'/rewards-terms/">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 function performSpin(p) {
@@ -272,7 +281,7 @@ function performSpin(p) {
     const access = findSpinAccess(token);
     if (!access || access.values[3] !== 'ACTIVE') return privatePage('Spin unavailable', 'This link is invalid or has already been used.');
     if (new Date(access.values[4]).getTime() < Date.now()) return privatePage('Invitation expired', 'This Welcome Wheel invitation has expired.');
-    if (!spinWindowStatus().open) return privatePage('The wheel is resting', 'Spins are available Wednesday and Saturday from 9:00 am to 7:30 pm Hobart time.');
+    if (spinsThisWeek(access.values[1]) >= CONFIG.maxSpinsPerWeek) return privatePage('Weekly spins used', 'You have used both Welcome Wheel spins for this week. Your allowance resets every Monday in Hobart.');
     prize = choosePrize();
     code = makePrizeCode();
     expires = new Date(Date.now() + CONFIG.prizeExpiryHours * 3600000);
@@ -345,6 +354,20 @@ function wheelCss() {
 
 function privatePage(title, message) {
   return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+escapeHtml(title)+'</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>'+escapeHtml(title)+'</h1><p>'+escapeHtml(message)+'</p><p><a href="'+CONFIG.website+'/loyalty/">Return to 52 South Rewards</a> · <a href="tel:+61492144209">Call '+CONFIG.phone+'</a></p></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+}
+
+function wheelEmailText(memberId, spinLink) {
+  return 'Hello,\n\nYour 52 South Rewards access is ready.'+
+    (memberId ? '\nMember ID: ' + memberId : '') +
+    '\n\nOpen your private Welcome Wheel link:\n' + spinLink +
+    '\n\nMembers aged 21+ may spin up to twice each week. The weekly allowance resets every Monday in Hobart. This link is available for 14 days and any prize must be redeemed in person within 24 hours.\n\nPlease do not forward your private link.\nRewards terms: ' + CONFIG.website + '/rewards-terms/' +
+    '\n\n52 South Cafe & Restaurant\n52 Marys Hope Road, Rosetta TAS 7010\n' + CONFIG.phone + '\n' + CONFIG.website;
+}
+
+function wheelEmailHtml(memberId, spinLink) {
+  return '<div style="margin:0;padding:28px;background:#f3efe5;color:#18130b;font:16px Arial,sans-serif"><div style="max-width:620px;margin:auto;padding:32px;border:1px solid #d6c69d;border-radius:18px;background:#fff"><div style="font-size:12px;font-weight:700;letter-spacing:2px;color:#8b681d">52 SOUTH REWARDS</div><h1 style="margin:12px 0;font:32px Georgia,serif">Your rewards access is ready</h1>'+
+    (memberId ? '<p><strong>Member ID:</strong> '+escapeHtml(memberId)+'</p>' : '')+
+    '<p>Use the button below to open your private Welcome Wheel link.</p><p style="margin:28px 0"><a href="'+escapeHtml(spinLink)+'" style="display:inline-block;padding:14px 22px;border-radius:8px;background:#1b160d;color:#f1d482;text-decoration:none;font-weight:700">Open my Welcome Wheel</a></p><p>Members aged 21+ may spin up to <strong>twice each week</strong>. The allowance resets every Monday in Hobart. This invitation is available for 14 days and each prize must be redeemed in person within 24 hours.</p><p style="color:#6f675b">Please do not forward your private link. Read the <a href="'+CONFIG.website+'/rewards-terms/" style="color:#76530d">Rewards terms</a>.</p><hr style="border:0;border-top:1px solid #e4ded0;margin:28px 0"><p style="font-size:13px;color:#6f675b">52 South Cafe & Restaurant<br>52 Marys Hope Road, Rosetta TAS 7010<br>'+CONFIG.phone+' · <a href="'+CONFIG.website+'">52south.au</a></p></div></div>';
 }
 
 function memberSheet() {
