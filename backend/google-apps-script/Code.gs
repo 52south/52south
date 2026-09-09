@@ -6,7 +6,7 @@ const CONFIG = Object.freeze({
   phone: '0492 144 209'
 });
 const BOOKING_HEADERS = Object.freeze(['Received (Hobart)','Booking date','Booking time','Guests','First name','Last name','Mobile','Email','Dietary / occasion','Terms accepted','Source','Status','Reference','Delivery']);
-const MEMBER_HEADERS = Object.freeze(['Joined (Hobart)','Member ID','Status','Full name','Mobile','Email','Date of birth','Consent','Source','Email normalized','Mobile normalized','Delivery']);
+const MEMBER_HEADERS = Object.freeze(['Joined (Hobart)','Member ID','Status','Full name','Mobile','Email','Date of birth','Consent','Source','Email normalized','Mobile normalized','Delivery','Mobile last 9','Surname normalized','DOB normalized']);
 
 function doGet() {
   return response('52 South booking service', 'The reservation service is ready. Return to the booking page to request a table.');
@@ -60,28 +60,30 @@ function doPost(e) {
 function registerMember(p) {
   const started = Date.parse(p.form_started_at || '');
   if (!Number.isFinite(started) || Date.now() - started < 2500) return memberResponse('Please try again', 'Return to the membership form and review your details before sending.');
-  ['full_name','phone','email','date_of_birth','membership_consent'].forEach(key => {
+  ['full_name','surname','phone','email','date_of_birth','membership_consent'].forEach(key => {
     if (!String(p[key] || '').trim()) throw new Error('Missing required membership information.');
   });
   const email = normalizeEmail(p.email);
   const phone = normalizePhone(p.phone);
-  validateBirthDate(p.date_of_birth);
+  const phoneLast9 = phone.slice(-9);
+  const surname = normalizeSurname(p.surname);
+  const dob = validateBirthDate(p.date_of_birth);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   let sheet, row, memberId;
   try {
     sheet = memberSheet();
-    if (memberExists(sheet, email, phone)) return memberResponse('Membership already exists', 'A membership already uses this email address or mobile number. Please contact 52 South if you need help.');
+    if (memberExists(sheet, email, phoneLast9, surname, dob)) return memberResponse('Membership already exists', 'We found an existing membership using this email, mobile number, or surname and date of birth. Please contact 52 South if you need help.');
     memberId = makeMemberId();
-    row = appendMemberRow(sheet, p, memberId, email, phone);
+    row = appendMemberRow(sheet, p, memberId, email, phone, phoneLast9, surname, dob);
   } finally { lock.releaseLock(); }
 
   try {
     MailApp.sendEmail({
       to: CONFIG.restaurantEmail,
       subject: 'New 52 South Rewards member — ' + memberId,
-      body: 'Member ID: '+memberId+'\nName: '+clean(p.full_name)+'\nMobile: '+clean(p.phone)+'\nEmail: '+email+'\n\nThe complete record is stored in the private Members sheet.',
+      body: 'Member ID: '+memberId+'\nName: '+clean(p.full_name)+' '+clean(p.surname)+'\nMobile: '+clean(p.phone)+'\nEmail: '+email+'\n\nThe complete record is stored in the private Members sheet.',
       replyTo: email,
       name: '52 South Website Memberships'
     });
@@ -120,23 +122,47 @@ function memberSheet() {
     sheet.appendRow(MEMBER_HEADERS);
     sheet.setFrozenRows(1);
   }
+  migrateMemberSheet(sheet);
   return sheet;
 }
 
-function memberExists(sheet, email, phone) {
+function migrateMemberSheet(sheet) {
+  sheet.getRange(1, 1, 1, MEMBER_HEADERS.length).setValues([MEMBER_HEADERS]);
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return false;
-  const values = sheet.getRange(2, 10, lastRow - 1, 2).getDisplayValues();
-  return values.some(row => row[0] === email || row[1] === phone);
+  if (lastRow < 2) return;
+  const values = sheet.getRange(2, 1, lastRow - 1, MEMBER_HEADERS.length).getDisplayValues();
+  const identityRows = values.map(row => {
+    let email = row[9];
+    let phone = row[10];
+    try { email = email || normalizeEmail(row[5]); } catch (error) { email = ''; }
+    try { phone = phone || normalizePhone(row[4]); } catch (error) { phone = ''; }
+    let surname = row[13];
+    try { surname = surname || normalizeSurname(extractSurname(row[3])); } catch (error) { surname = ''; }
+    const dob = row[14] || clean(row[6]);
+    return [email, phone, phone ? phone.slice(-9) : '', surname, dob];
+  });
+  sheet.getRange(2, 10, identityRows.length, 2).setNumberFormat('@').setValues(identityRows.map(row => row.slice(0, 2)));
+  sheet.getRange(2, 13, identityRows.length, 3).setNumberFormat('@').setValues(identityRows.map(row => row.slice(2)));
 }
 
-function appendMemberRow(sheet, p, memberId, email, phone) {
+function memberExists(sheet, email, phoneLast9, surname, dob) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return false;
+  const values = sheet.getRange(2, 1, lastRow - 1, MEMBER_HEADERS.length).getDisplayValues();
+  return values.some(row =>
+    row[9] === email ||
+    row[12] === phoneLast9 ||
+    (row[13] === surname && row[14] === dob)
+  );
+}
+
+function appendMemberRow(sheet, p, memberId, email, phone, phoneLast9, surname, dob) {
   const row = sheet.getLastRow() + 1;
-  sheet.getRange(row, 1, 1, 12).setNumberFormat('@');
+  sheet.getRange(row, 1, 1, MEMBER_HEADERS.length).setNumberFormat('@');
   sheet.getRange(row, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
-  sheet.getRange(row, 1, 1, 12).setValues([[
-    new Date(), memberId, 'Active', clean(p.full_name), clean(p.phone), email, clean(p.date_of_birth),
-    'Accepted', clean(p.membership_source || '52south.au member benefits page'), email, phone, 'PENDING'
+  sheet.getRange(row, 1, 1, MEMBER_HEADERS.length).setValues([[
+    new Date(), memberId, 'Active', clean(p.full_name) + ' ' + clean(p.surname), clean(p.phone), email, dob,
+    'Accepted', clean(p.membership_source || '52south.au member benefits page'), email, phone, 'PENDING', phoneLast9, surname, dob
   ]]);
   return row;
 }
@@ -154,6 +180,17 @@ function normalizePhone(value) {
   return phone;
 }
 
+function normalizeSurname(value) {
+  const surname = clean(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+  if (surname.length < 2) throw new Error('Enter a valid surname.');
+  return surname;
+}
+
+function extractSurname(value) {
+  const parts = clean(value).split(/\s+/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : '';
+}
+
 function validateBirthDate(value) {
   const dob = clean(value);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) throw new Error('Invalid date of birth.');
@@ -164,6 +201,7 @@ function validateBirthDate(value) {
   const today = Utilities.formatDate(new Date(), CONFIG.timezone, 'yyyy-MM-dd');
   const oldest = String(Number(today.slice(0,4)) - 120) + today.slice(4);
   if (dob > today || dob < oldest) throw new Error('Invalid date of birth.');
+  return dob;
 }
 
 function makeMemberId() {
