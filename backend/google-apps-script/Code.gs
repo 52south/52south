@@ -100,7 +100,7 @@ function registerMember(p) {
     spinToken = createSpinAccess(memberId);
   } finally { lock.releaseLock(); }
 
-  const spinLink = serviceUrl() + '?action=spin&token=' + encodeURIComponent(spinToken);
+  const spinLink = memberWheelUrl(spinToken);
   try {
     MailApp.sendEmail({
       to: CONFIG.restaurantEmail,
@@ -156,7 +156,7 @@ function requestSpinAccess(p) {
   } finally { lock.releaseLock(); }
 
   if (spinToken && storedEmail) {
-    const spinLink = serviceUrl() + '?action=spin&token=' + encodeURIComponent(spinToken);
+    const spinLink = memberWheelUrl(spinToken);
     MailApp.sendEmail({
       to: storedEmail,
       subject: 'Your private 52 South Welcome Wheel link',
@@ -177,6 +177,10 @@ function validateMemberAge(dob) {
 
 function serviceUrl() {
   return ScriptApp.getService().getUrl() || 'https://script.google.com/macros/s/AKfycbymxZXbLhodJ1XmhGSfgvXKavn_S_ANsou_E3l2t2dxdguPboGiJidkAUo_Wke9Cys6sQ/exec';
+}
+
+function memberWheelUrl(token) {
+  return CONFIG.website + '/welcome-wheel/#' + encodeURIComponent(token);
 }
 
 function workbook() {
@@ -269,7 +273,7 @@ function spinPage(token) {
   if (spinsThisWeek(access.values[1]) >= CONFIG.maxSpinsPerWeek) return privatePage('Weekly spins used', 'You have used both Welcome Wheel spins for this week. Your allowance resets every Monday in Hobart.');
   const safeToken = escapeHtml(token);
   const segments = PRIZES.map(prize => '<span>'+escapeHtml(prize.name)+'</span>').join('');
-  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Welcome Wheel</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>Your Welcome Wheel</h1><p>Members can spin twice each week. Every spin wins and each prize must be used within 24 hours.</p><div class="pointer">▼</div><div class="wheel">'+segments+'</div><form method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="welcome_spin"><input type="hidden" name="token" value="'+safeToken+'"><button type="submit">Spin my wheel</button></form><small>Members 21+ · Weekly allowance resets Monday · <a href="'+CONFIG.website+'/rewards-terms/">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Welcome Wheel</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>Your Welcome Wheel</h1><p>Members can spin twice each week. Every spin wins and each prize must be used within 24 hours.</p><div class="pointer">▼</div><div class="wheel">'+segments+'</div><form method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="welcome_spin"><input type="hidden" name="token" value="'+safeToken+'"><button type="submit">Spin my wheel</button></form><small>Members 21+ · Weekly allowance resets Monday · <a href="'+CONFIG.website+'/rewards-terms/" target="_blank" rel="noopener">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function performSpin(p) {
@@ -295,7 +299,7 @@ function performSpin(p) {
     access.sheet.getRange(access.row, 6, 1, 2).setValues([[new Date(), code]]);
   } finally { lock.releaseLock(); }
   const expiryText = Utilities.formatDate(expires, CONFIG.timezone, 'EEE d MMM, h:mm a');
-  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>You won · 52 South</title><style>'+wheelCss()+' .wheel{animation:spin 3.2s cubic-bezier(.12,.72,.16,1) forwards}@keyframes spin{to{transform:rotate(1780deg)}}.code{font:700 clamp(2.6rem,12vw,5rem)/1 monospace;letter-spacing:.12em;color:#f2d989;margin:.25em 0}</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>You won</h1><div class="wheel mini"></div><h2>'+escapeHtml(prize.name)+'</h2><p>Show this six-digit code to our team:</p><div class="code">'+escapeHtml(code)+'</div><p><strong>Redeem by '+escapeHtml(expiryText)+' Hobart time.</strong></p><small>In person only · One use · No cash value · <a href="'+CONFIG.website+'/rewards-terms/">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>You won · 52 South</title><style>'+wheelCss()+' .wheel{animation:spin 3.2s cubic-bezier(.12,.72,.16,1) forwards}@keyframes spin{to{transform:rotate(1780deg)}}.code{font:700 clamp(2.6rem,12vw,5rem)/1 monospace;letter-spacing:.12em;color:#f2d989;margin:.25em 0}</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>You won</h1><div class="wheel mini"></div><h2>'+escapeHtml(prize.name)+'</h2><p>Show this six-digit code to our team:</p><div class="code">'+escapeHtml(code)+'</div><p><strong>Redeem by '+escapeHtml(expiryText)+' Hobart time.</strong></p><small>In person only · One use · No cash value · <a href="'+CONFIG.website+'/rewards-terms/" target="_blank" rel="noopener">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function choosePrize() {
@@ -353,7 +357,7 @@ function wheelCss() {
 }
 
 function privatePage(title, message) {
-  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+escapeHtml(title)+'</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>'+escapeHtml(title)+'</h1><p>'+escapeHtml(message)+'</p><p><a href="'+CONFIG.website+'/loyalty/">Return to 52 South Rewards</a> · <a href="tel:+61492144209">Call '+CONFIG.phone+'</a></p></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+escapeHtml(title)+'</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>'+escapeHtml(title)+'</h1><p>'+escapeHtml(message)+'</p><p><a href="'+CONFIG.website+'/loyalty/" target="_top">Return to 52 South Rewards</a> · <a href="tel:+61492144209">Call '+CONFIG.phone+'</a></p></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function wheelEmailText(memberId, spinLink) {
