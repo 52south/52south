@@ -25,7 +25,8 @@
       }
       const frame=document.createElement('iframe');
       frame.className='wheel-frame';frame.title='52 South member Welcome Wheel';
-      frame.referrerPolicy='no-referrer';frame.setAttribute('sandbox','allow-forms allow-scripts allow-same-origin allow-popups');
+      frame.referrerPolicy='no-referrer';frame.credentialless=true;frame.setAttribute('credentialless','');
+      frame.setAttribute('sandbox','allow-forms allow-scripts allow-same-origin allow-popups');
       frame.src='https://script.google.com/macros/s/AKfycbymxZXbLhodJ1XmhGSfgvXKavn_S_ANsou_E3l2t2dxdguPboGiJidkAUo_Wke9Cys6sQ/exec?action=spin&token='+encodeURIComponent(token);
       host.replaceChildren(frame);
     })();
