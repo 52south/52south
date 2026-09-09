@@ -3,12 +3,30 @@ const CONFIG = Object.freeze({
   ccEmail: '52southbookings@gmail.com',
   timezone: 'Australia/Hobart',
   website: 'https://52south.au',
-  phone: '0492 144 209'
+  phone: '0492 144 209',
+  spinDays: Object.freeze(['Wed','Sat']),
+  spinStartMinutes: 9 * 60,
+  spinEndMinutes: 19 * 60 + 30,
+  spinInviteDays: 14,
+  prizeExpiryHours: 24
 });
 const BOOKING_HEADERS = Object.freeze(['Received (Hobart)','Booking date','Booking time','Guests','First name','Last name','Mobile','Email','Dietary / occasion','Terms accepted','Source','Status','Reference','Delivery']);
 const MEMBER_HEADERS = Object.freeze(['Joined (Hobart)','Member ID','Status','Full name','Mobile','Email','Date of birth','Consent','Source','Email normalized','Mobile normalized','Delivery','Mobile last 9','Surname normalized','DOB normalized']);
+const SPIN_ACCESS_HEADERS = Object.freeze(['Created (Hobart)','Member ID','Token hash','Status','Expires (Hobart)','Used (Hobart)','Prize code']);
+const PRIZE_HEADERS = Object.freeze(['Awarded (Hobart)','Member ID','Prize','Code','Expires (Hobart)','Status','Redeemed (Hobart)']);
+const PRIZES = Object.freeze([
+  Object.freeze({name:'10% discount', weight:31}),
+  Object.freeze({name:'Free soft drink', weight:26}),
+  Object.freeze({name:'Free coffee', weight:20}),
+  Object.freeze({name:'Free milkshake', weight:12}),
+  Object.freeze({name:'Free chicken fried rice', weight:6}),
+  Object.freeze({name:'Free chicken kottu', weight:5})
+]);
 
-function doGet() {
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.action === 'spin') return spinPage(p.token);
+  if (p.action === 'redeem') return redemptionPage();
   return response('52 South booking service', 'The reservation service is ready. Return to the booking page to request a table.');
 }
 
@@ -17,6 +35,9 @@ function doPost(e) {
     const p = (e && e.parameter) || {};
     if (String(p._honey || '').trim()) return response('Request rejected', 'Please call the restaurant.');
     if (p.form_type === 'membership') return registerMember(p);
+    if (p.form_type === 'spin_access') return requestSpinAccess(p);
+    if (p.form_type === 'welcome_spin') return performSpin(p);
+    if (p.form_type === 'reward_redeem') return redeemPrize(p);
     const started = Date.parse(p.form_started_at || '');
     if (!Number.isFinite(started) || Date.now() - started < 2500) return response('Please try again', 'Return to the booking form and review your details before sending.');
 
@@ -68,17 +89,20 @@ function registerMember(p) {
   const phoneLast9 = phone.slice(-9);
   const surname = normalizeSurname(p.surname);
   const dob = validateBirthDate(p.date_of_birth);
+  validateMemberAge(dob);
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
-  let sheet, row, memberId;
+  let sheet, row, memberId, spinToken;
   try {
     sheet = memberSheet();
     if (memberExists(sheet, email, phoneLast9, surname, dob)) return memberResponse('Membership already exists', 'We found an existing membership using this email, mobile number, or surname and date of birth. Please contact 52 South if you need help.');
     memberId = makeMemberId();
     row = appendMemberRow(sheet, p, memberId, email, phone, phoneLast9, surname, dob);
+    spinToken = createSpinAccess(memberId);
   } finally { lock.releaseLock(); }
 
+  const spinLink = serviceUrl() + '?action=spin&token=' + encodeURIComponent(spinToken);
   try {
     MailApp.sendEmail({
       to: CONFIG.restaurantEmail,
@@ -90,7 +114,7 @@ function registerMember(p) {
     MailApp.sendEmail({
       to: email,
       subject: 'Welcome to 52 South Rewards — ' + memberId,
-      body: 'Welcome to 52 South Rewards.\n\nYour member ID is '+memberId+'.\n\nWe will use your details to administer your membership and send member news and offers. You can unsubscribe at any time by replying to this email.\n\n52 South Cafe & Restaurant\n'+CONFIG.phone,
+      body: 'Welcome to 52 South Rewards.\n\nYour member ID is '+memberId+'.\n\nYour one-time Welcome Wheel link:\n'+spinLink+'\n\nThe wheel opens Wednesdays and Saturdays from 9:00 am to 7:30 pm Hobart time. Your invitation is available for 14 days. Any prize must be redeemed in person within 24 hours. Members must be 21 or older.\n\nTerms: '+CONFIG.website+'/rewards-terms/\n\nWe will use your details to administer your membership and send member news and offers. You can unsubscribe at any time by replying to this email.\n\n52 South Cafe & Restaurant\n'+CONFIG.phone,
       replyTo: CONFIG.restaurantEmail,
       name: '52 South Cafe & Restaurant'
     });
@@ -100,6 +124,227 @@ function registerMember(p) {
     return memberResponse('Membership saved', 'Your membership was created, but the welcome email could not be sent. Please contact 52 South and quote ' + memberId + '.', memberId);
   }
   return memberResponse('Welcome to 52 South Rewards', 'Your membership has been created. Check your inbox for your member ID.', memberId, CONFIG.website + '/loyalty/?submitted=true');
+}
+
+function requestSpinAccess(p) {
+  const started = Date.parse(p.form_started_at || '');
+  if (!Number.isFinite(started) || Date.now() - started < 2500) return memberResponse('Please try again', 'Return to the member page and review your details before sending.');
+  ['surname','phone','email','date_of_birth'].forEach(key => {
+    if (!String(p[key] || '').trim()) throw new Error('Enter all four member identity details.');
+  });
+  const email = normalizeEmail(p.email);
+  const phoneLast9 = normalizePhone(p.phone).slice(-9);
+  const surname = normalizeSurname(p.surname);
+  const dob = validateBirthDate(p.date_of_birth);
+  validateMemberAge(dob);
+
+  const genericMessage = 'If all details match an eligible membership, we have emailed a private Welcome Wheel link to the address already on that membership.';
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  let memberId = '', storedEmail = '', spinToken = '';
+  try {
+    const sheet = memberSheet();
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const values = sheet.getRange(2, 1, lastRow - 1, MEMBER_HEADERS.length).getDisplayValues();
+      const match = values.find(row => row[2] === 'Active' && row[9] === email && row[12] === phoneLast9 && row[13] === surname && row[14] === dob);
+      if (match) {
+        memberId = match[1];
+        storedEmail = match[9];
+        spinToken = createSpinAccess(memberId);
+      }
+    }
+  } finally { lock.releaseLock(); }
+
+  if (spinToken && storedEmail) {
+    const spinLink = serviceUrl() + '?action=spin&token=' + encodeURIComponent(spinToken);
+    MailApp.sendEmail({
+      to: storedEmail,
+      subject: 'Your private 52 South Welcome Wheel link',
+      body: 'Here is your private, one-time Welcome Wheel link:\n\n'+spinLink+'\n\nThe wheel opens Wednesdays and Saturdays from 9:00 am to 7:30 pm Hobart time. The invitation is available for 14 days. Any prize must be redeemed in person within 24 hours.\n\nDo not forward this link. Terms: '+CONFIG.website+'/rewards-terms/\n\n52 South Cafe & Restaurant\n'+CONFIG.phone,
+      replyTo: CONFIG.restaurantEmail,
+      name: '52 South Cafe & Restaurant'
+    });
+  }
+  return memberResponse('Check your email', genericMessage);
+}
+
+function validateMemberAge(dob) {
+  const today = Utilities.formatDate(new Date(), CONFIG.timezone, 'yyyy-MM-dd');
+  const cutoff = String(Number(today.slice(0, 4)) - 21) + today.slice(4);
+  if (dob > cutoff) throw new Error('52 South Rewards Welcome Wheel is available only to members aged 21 or older.');
+}
+
+function serviceUrl() {
+  return ScriptApp.getService().getUrl() || 'https://script.google.com/macros/s/AKfycbymxZXbLhodJ1XmhGSfgvXKavn_S_ANsou_E3l2t2dxdguPboGiJidkAUo_Wke9Cys6sQ/exec';
+}
+
+function workbook() {
+  const properties = PropertiesService.getScriptProperties();
+  let id = properties.getProperty('BOOKING_SHEET_ID');
+  if (!id) {
+    bookingSheet();
+    id = properties.getProperty('BOOKING_SHEET_ID');
+  }
+  const spreadsheet = SpreadsheetApp.openById(id);
+  spreadsheet.setSpreadsheetTimeZone(CONFIG.timezone);
+  return spreadsheet;
+}
+
+function managedSheet(name, headers) {
+  const spreadsheet = workbook();
+  let sheet = spreadsheet.getSheetByName(name);
+  if (!sheet) sheet = spreadsheet.insertSheet(name);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+  } else {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function spinAccessSheet() { return managedSheet('Spin Access', SPIN_ACCESS_HEADERS); }
+function prizeSheet() { return managedSheet('Prize Wins', PRIZE_HEADERS); }
+
+function createSpinAccess(memberId) {
+  const sheet = spinAccessSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    const values = sheet.getRange(2, 1, lastRow - 1, SPIN_ACCESS_HEADERS.length).getDisplayValues();
+    if (values.some(row => row[1] === memberId && row[3] === 'SPUN')) return '';
+    values.forEach((row, index) => {
+      if (row[1] === memberId && row[3] === 'ACTIVE') sheet.getRange(index + 2, 4).setValue('REPLACED');
+    });
+  }
+  const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  const expires = new Date(Date.now() + CONFIG.spinInviteDays * 86400000);
+  const row = sheet.getLastRow() + 1;
+  sheet.getRange(row, 1, 1, SPIN_ACCESS_HEADERS.length).setNumberFormat('@');
+  sheet.getRange(row, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  sheet.getRange(row, 5).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  sheet.getRange(row, 1, 1, SPIN_ACCESS_HEADERS.length).setValues([[new Date(), memberId, hashValue(token), 'ACTIVE', expires, '', '']]);
+  return token;
+}
+
+function hashValue(value) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value), Utilities.Charset.UTF_8)
+    .map(byte => ('0' + (byte & 255).toString(16)).slice(-2)).join('');
+}
+
+function findSpinAccess(token) {
+  if (!/^[a-f0-9]{64}$/i.test(String(token || ''))) return null;
+  const hash = hashValue(token);
+  const sheet = spinAccessSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  const values = sheet.getRange(2, 1, lastRow - 1, SPIN_ACCESS_HEADERS.length).getValues();
+  for (let index = values.length - 1; index >= 0; index--) {
+    if (String(values[index][2]) === hash) return {sheet:sheet, row:index + 2, values:values[index]};
+  }
+  return null;
+}
+
+function spinWindowStatus(now) {
+  const date = now || new Date();
+  const day = Utilities.formatDate(date, CONFIG.timezone, 'EEE');
+  const minutes = Number(Utilities.formatDate(date, CONFIG.timezone, 'H')) * 60 + Number(Utilities.formatDate(date, CONFIG.timezone, 'm'));
+  return {open: CONFIG.spinDays.indexOf(day) !== -1 && minutes >= CONFIG.spinStartMinutes && minutes <= CONFIG.spinEndMinutes, day:day, minutes:minutes};
+}
+
+function spinPage(token) {
+  const access = findSpinAccess(token);
+  if (!access || access.values[3] !== 'ACTIVE') return privatePage('Welcome Wheel unavailable', 'This private link is invalid or has already been used.');
+  if (new Date(access.values[4]).getTime() < Date.now()) return privatePage('Invitation expired', 'This Welcome Wheel invitation has expired. Please contact 52 South if you need help.');
+  const windowStatus = spinWindowStatus();
+  if (!windowStatus.open) return privatePage('The wheel is resting', 'Come back Wednesday or Saturday between 9:00 am and 7:30 pm Hobart time. Your private link will work until its invitation expiry date.');
+  const safeToken = escapeHtml(token);
+  const segments = PRIZES.map(prize => '<span>'+escapeHtml(prize.name)+'</span>').join('');
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Welcome Wheel</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>Your Welcome Wheel</h1><p>One spin. Every spin wins. Your prize must be used within 24 hours.</p><div class="pointer">▼</div><div class="wheel">'+segments+'</div><form method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="welcome_spin"><input type="hidden" name="token" value="'+safeToken+'"><button type="submit">Spin my wheel</button></form><small>Members 21+ · Wednesdays and Saturdays · <a href="'+CONFIG.website+'/rewards-terms/">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+}
+
+function performSpin(p) {
+  const token = String(p.token || '');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  let prize, code, expires;
+  try {
+    const access = findSpinAccess(token);
+    if (!access || access.values[3] !== 'ACTIVE') return privatePage('Spin unavailable', 'This link is invalid or has already been used.');
+    if (new Date(access.values[4]).getTime() < Date.now()) return privatePage('Invitation expired', 'This Welcome Wheel invitation has expired.');
+    if (!spinWindowStatus().open) return privatePage('The wheel is resting', 'Spins are available Wednesday and Saturday from 9:00 am to 7:30 pm Hobart time.');
+    prize = choosePrize();
+    code = makePrizeCode();
+    expires = new Date(Date.now() + CONFIG.prizeExpiryHours * 3600000);
+    const wins = prizeSheet();
+    const winRow = wins.getLastRow() + 1;
+    wins.getRange(winRow, 1, 1, PRIZE_HEADERS.length).setNumberFormat('@');
+    wins.getRange(winRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+    wins.getRange(winRow, 5).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+    wins.getRange(winRow, 1, 1, PRIZE_HEADERS.length).setValues([[new Date(), access.values[1], prize.name, code, expires, 'ACTIVE', '']]);
+    access.sheet.getRange(access.row, 4).setValue('SPUN');
+    access.sheet.getRange(access.row, 6, 1, 2).setValues([[new Date(), code]]);
+  } finally { lock.releaseLock(); }
+  const expiryText = Utilities.formatDate(expires, CONFIG.timezone, 'EEE d MMM, h:mm a');
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>You won · 52 South</title><style>'+wheelCss()+' .wheel{animation:spin 3.2s cubic-bezier(.12,.72,.16,1) forwards}@keyframes spin{to{transform:rotate(1780deg)}}.code{font:700 clamp(2.6rem,12vw,5rem)/1 monospace;letter-spacing:.12em;color:#f2d989;margin:.25em 0}</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>You won</h1><div class="wheel mini"></div><h2>'+escapeHtml(prize.name)+'</h2><p>Show this six-digit code to our team:</p><div class="code">'+escapeHtml(code)+'</div><p><strong>Redeem by '+escapeHtml(expiryText)+' Hobart time.</strong></p><small>In person only · One use · No cash value · <a href="'+CONFIG.website+'/rewards-terms/">Terms</a></small></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+}
+
+function choosePrize() {
+  let draw = Math.floor(Math.random() * 100) + 1;
+  for (let index = 0; index < PRIZES.length; index++) {
+    draw -= PRIZES[index].weight;
+    if (draw <= 0) return PRIZES[index];
+  }
+  return PRIZES[0];
+}
+
+function makePrizeCode() {
+  const sheet = prizeSheet();
+  const used = new Set();
+  if (sheet.getLastRow() >= 2) sheet.getRange(2, 4, sheet.getLastRow() - 1, 1).getDisplayValues().forEach(row => used.add(row[0]));
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    if (!used.has(code)) return code;
+  }
+  throw new Error('Could not generate a redemption code. Please try again.');
+}
+
+function redemptionPage() {
+  if (!PropertiesService.getScriptProperties().getProperty('REWARDS_STAFF_PIN_HASH')) return privatePage('Staff redemption is not configured', 'The protected staff PIN must be configured before this screen can be used.');
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Staff Redemption</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · STAFF</div><h1>Redeem a prize</h1><form method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="reward_redeem"><label>Customer code<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label><label>Staff PIN<input name="staff_pin" type="password" inputmode="numeric" required></label><button type="submit">Verify and redeem</button></form></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+}
+
+function redeemPrize(p) {
+  const configuredHash = PropertiesService.getScriptProperties().getProperty('REWARDS_STAFF_PIN_HASH');
+  if (!configuredHash || hashValue(p.staff_pin || '') !== configuredHash) return privatePage('Not authorised', 'The staff PIN is incorrect.');
+  const code = String(p.code || '').trim();
+  if (!/^\d{6}$/.test(code)) return privatePage('Invalid code', 'Enter the customer’s six-digit code.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = prizeSheet();
+    if (sheet.getLastRow() < 2) return privatePage('Code not found', 'Check the six-digit code and try again.');
+    const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, PRIZE_HEADERS.length).getValues();
+    for (let index = values.length - 1; index >= 0; index--) {
+      if (String(values[index][3]).padStart(6, '0') !== code) continue;
+      if (values[index][5] !== 'ACTIVE') return privatePage('Already redeemed', 'This prize code has already been used.');
+      if (new Date(values[index][4]).getTime() < Date.now()) {
+        sheet.getRange(index + 2, 6).setValue('EXPIRED');
+        return privatePage('Prize expired', 'This prize passed its 24-hour redemption deadline.');
+      }
+      sheet.getRange(index + 2, 6, 1, 2).setValues([['REDEEMED', new Date()]]);
+      return privatePage('Prize redeemed', values[index][2] + ' has been marked as used.');
+    }
+    return privatePage('Code not found', 'Check the six-digit code and try again.');
+  } finally { lock.releaseLock(); }
+}
+
+function wheelCss() {
+  return 'body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 50% 12%,#38260b,#080706 52%);color:#f8f3e7;font:17px system-ui;text-align:center}.card{width:min(92vw,650px);box-sizing:border-box;padding:34px 24px;border:1px solid #6e5426;border-radius:28px;background:rgba(16,13,9,.95);box-shadow:0 30px 90px #000}.brand{color:#e4c272;font-size:.72rem;font-weight:900;letter-spacing:.2em}h1{font:400 clamp(2.7rem,10vw,5rem)/1 Georgia,serif;margin:.28em 0}h2{font:400 2rem Georgia,serif;color:#f2d989}.pointer{position:relative;z-index:2;color:#f2d989;font-size:2rem;margin-bottom:-12px}.wheel{width:min(72vw,390px);aspect-ratio:1;margin:auto;border:9px solid #e4c272;border-radius:50%;background:conic-gradient(#9c2f1c 0 16.666%,#d29a2f 0 33.333%,#174c35 0 50%,#7d2441 0 66.666%,#a9631c 0 83.333%,#28516b 0);box-shadow:inset 0 0 0 6px #171006,0 18px 50px #000}.wheel span{display:none}.wheel.mini{width:120px;border-width:5px;animation:spin 3.2s cubic-bezier(.12,.72,.16,1) forwards}button{width:100%;margin:26px 0 16px;padding:16px;border:0;border-radius:12px;background:#e4c272;color:#171006;font-weight:900;font-size:1rem;cursor:pointer}label{display:block;text-align:left;margin:18px 0 8px;font-weight:800}input{width:100%;box-sizing:border-box;margin-top:7px;padding:15px;border:1px solid #655536;border-radius:10px;background:#090806;color:#fff;font-size:1.1rem}small{display:block;color:#aaa397}a{color:#f2d989}';
+}
+
+function privatePage(title, message) {
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+escapeHtml(title)+'</title><style>'+wheelCss()+'</style></head><body><main class="card"><div class="brand">52 SOUTH · REWARDS</div><h1>'+escapeHtml(title)+'</h1><p>'+escapeHtml(message)+'</p><p><a href="'+CONFIG.website+'/loyalty/">Return to 52 South Rewards</a> · <a href="tel:+61492144209">Call '+CONFIG.phone+'</a></p></main></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 function memberSheet() {
