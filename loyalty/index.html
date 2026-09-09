@@ -61,19 +61,19 @@
           <p class="lede">Add your details and we’ll keep you close to the food, offers and occasions happening at 52 South.</p>
           <ul class="loyalty-points"><li>No membership fee</li><li>Only occasional, useful updates</li><li>Unsubscribe whenever you like</li></ul>
         </div>
-        <form class="booking-form loyalty-form" action="https://formsubmit.co/52southbookings@gmail.com" method="POST">
-          <input type="hidden" name="_subject" value="New 52 South Rewards signup">
-          <input type="hidden" name="_template" value="table">
-          <input type="hidden" name="_next" value="https://52south.au/loyalty/?submitted=true">
-          <input type="hidden" name="_captcha" value="false">
+        <form class="booking-form loyalty-form" action="https://script.google.com/macros/s/AKfycbyqSE8q3FdVAKGHnnec5KHKtFzdKWJLe6ikWkHIXcdLr9MjnzzhPPMUZ9GoJAsSXpzW/exec" method="POST">
+          <input type="hidden" name="form_type" value="membership">
+          <input type="hidden" name="membership_source" value="52south.au member benefits page">
+          <input type="hidden" name="form_started_at" value="">
           <input type="text" name="_honey" class="booking-honeypot" tabindex="-1" autocomplete="off">
           <div class="booking-success" hidden tabindex="-1"><strong>Welcome to 52 South Rewards.</strong><p>Thank you for joining us.</p></div>
-          <label>Full name<input name="name" autocomplete="name" required></label>
+          <label>Full name<input name="full_name" autocomplete="name" required></label>
+          <label>Mobile number<input name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="04XX XXX XXX" required></label>
           <label>Email address<input name="email" type="email" autocomplete="email" required></label>
-          <label>Birthday month <select name="birthday_month"><option value="" selected>Prefer not to say</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></label>
-          <label class="consent"><input name="marketing_consent" type="checkbox" value="Yes - customer agreed to receive offers and news" required> <span>I agree to receive offers and news from 52 South. I can unsubscribe at any time.</span></label>
+          <label>Date of birth<input name="date_of_birth" type="date" autocomplete="bday" required></label>
+          <label class="consent"><input name="membership_consent" type="checkbox" value="Yes" required> <span>I agree to join 52 South Rewards and receive member offers and news. I can unsubscribe at any time.</span></label>
           <button class="btn gold booking-submit" type="submit">Join 52 South Rewards</button>
-          <p class="notice">We use these details only for 52 South news and offers. See our <a href="/privacy/">privacy notice</a>.</p>
+          <p class="notice">One membership is allowed per email address and mobile number. We use these details to administer your membership and send member news and offers. See our <a href="/privacy/">privacy notice</a>.</p>
         </form>
       </div>
     </section>
@@ -87,6 +87,16 @@
 </footer>
 
   <script src="script.js"></script>
-  <script>if(new URLSearchParams(location.search).has('submitted')){const success=document.querySelector('.booking-success');success.hidden=false;success.focus();document.querySelector('.loyalty-form').reset();}</script>
+  <script>
+    const loyaltyForm=document.querySelector('.loyalty-form');
+    const loyaltyStarted=loyaltyForm?.querySelector('[name="form_started_at"]');
+    if(loyaltyStarted)loyaltyStarted.value=new Date().toISOString();
+    loyaltyForm?.addEventListener('submit',()=>{
+      window.southAnalytics?.track('membership_signup_submit',{membership_type:'52_south_rewards'});
+      window.southAnalytics?.meta('CompleteRegistration',{content_name:'52 South Rewards'},true);
+      window.southAnalytics?.tiktok('CompleteRegistration',{content_name:'52 South Rewards'});
+    });
+    if(new URLSearchParams(location.search).has('submitted')){const success=document.querySelector('.booking-success');success.hidden=false;success.focus();loyaltyForm.reset();}
+  </script>
 </body>
 </html>
