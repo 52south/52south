@@ -119,9 +119,9 @@ function registerMember(p) {
     sheet.getRange(row, 12).setValue('EMAILS_SENT');
   } catch (mailError) {
     sheet.getRange(row, 12).setValue('EMAIL_FAILED: ' + clean(mailError.message));
-    return memberResponse('Membership saved', 'Your membership was created and your Welcome Wheel is opening now. The welcome email could not be sent, so please keep your member ID.', memberId, memberWheelUrl(spinToken));
+    return spinPage(spinToken, 'Membership active. Keep member ID ' + memberId + ' — the welcome email could not be delivered.');
   }
-  return memberResponse('Welcome to 52 South Rewards', 'Your membership has been created. Your Welcome Wheel is opening now.', memberId, memberWheelUrl(spinToken));
+  return spinPage(spinToken, 'Welcome! Your 52 South membership is active and your first spin is ready.');
 }
 
 function requestSpinAccess(p) {
@@ -153,7 +153,7 @@ function requestSpinAccess(p) {
     }
   } finally { lock.releaseLock(); }
 
-  if (spinToken) return memberResponse('Member verified', 'Your Welcome Wheel is opening now.', '', memberWheelUrl(spinToken));
+  if (spinToken) return spinPage(spinToken);
   return memberResponse('Member verification complete', genericMessage);
 }
 
@@ -254,14 +254,15 @@ function spinsThisWeek(memberId, now) {
   return values.filter(row => row[1] === memberId && row[0] instanceof Date && Utilities.formatDate(row[0], CONFIG.timezone, 'yyyy-MM-dd') >= weekStart).length;
 }
 
-function spinPage(token) {
+function spinPage(token, notice) {
   const access = findSpinAccess(token);
   if (!access || access.values[3] !== 'ACTIVE') return privatePage('Welcome Wheel unavailable', 'This private link is invalid or has already been used.');
   if (new Date(access.values[4]).getTime() < Date.now()) return privatePage('Invitation expired', 'This Welcome Wheel invitation has expired. Please contact 52 South if you need help.');
   if (spinsThisWeek(access.values[1]) >= CONFIG.maxSpinsPerWeek) return privatePage('Weekly spins used', 'You have used both Welcome Wheel spins for this week. Your allowance resets every Monday in Hobart.');
   const safeToken = escapeHtml(token);
+  const intro = escapeHtml(notice || 'Two spins every week. Every spin wins a 52 South treat.');
   const segments = PRIZES.map((prize,index) => '<span style="--i:'+index+'"><b>'+escapeHtml(prize.label)+'</b></span>').join('');
-  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Welcome Wheel</title><style>'+wheelCss()+'</style></head><body><main class="card wheel-card"><div class="brand">52 SOUTH · MEMBER REWARDS</div><h1>Spin &amp; taste your luck</h1><p class="intro">Two spins every week. Every spin wins a 52 South treat.</p><div class="wheel-stage"><div class="pointer">▼</div><div class="wheel">'+segments+'<i class="hub">52<small>SOUTH</small></i></div></div><form id="spin-form" method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="welcome_spin"><input type="hidden" name="token" value="'+safeToken+'"><button type="submit"><span>SPIN THE WHEEL</span><i>→</i></button></form><small class="rules">Members 21+ · Resets Monday · Prize valid 24 hours · <a href="'+CONFIG.website+'/rewards-terms/" target="_blank" rel="noopener">Terms</a></small></main><script>var f=document.getElementById("spin-form"),w=document.querySelector(".wheel"),b=f.querySelector("button");f.addEventListener("submit",function(e){if(f.dataset.spinning)return;e.preventDefault();f.dataset.spinning="1";w.classList.add("is-spinning");b.disabled=true;b.querySelector("span").textContent="CHOOSING YOUR PRIZE…";setTimeout(function(){f.submit()},2400)})</script></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>52 South Welcome Wheel</title><style>'+wheelCss()+'</style></head><body><main class="card wheel-card"><div class="brand">52 SOUTH · MEMBER REWARDS</div><h1>Spin &amp; taste your luck</h1><p class="intro">'+intro+'</p><div class="wheel-stage"><div class="pointer">▼</div><div class="wheel">'+segments+'<i class="hub">52<small>SOUTH</small></i></div></div><form id="spin-form" method="post" action="'+escapeHtml(serviceUrl())+'"><input type="hidden" name="form_type" value="welcome_spin"><input type="hidden" name="token" value="'+safeToken+'"><button type="submit"><span>SPIN THE WHEEL</span><i>→</i></button></form><small class="rules">Members 21+ · Resets Monday · Prize valid 24 hours · <a href="'+CONFIG.website+'/rewards-terms/" target="_blank" rel="noopener">Terms</a></small></main><script>var f=document.getElementById("spin-form"),w=document.querySelector(".wheel"),b=f.querySelector("button");f.addEventListener("submit",function(e){if(f.dataset.spinning)return;e.preventDefault();f.dataset.spinning="1";w.classList.add("is-spinning");b.disabled=true;b.querySelector("span").textContent="CHOOSING YOUR PRIZE…";setTimeout(function(){f.submit()},2400)})</script></body></html>').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function performSpin(p) {

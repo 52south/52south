@@ -20,7 +20,7 @@
       const token=decodeURIComponent(location.hash.slice(1));
       const host=document.getElementById('wheel-host');
       if(!/^[a-f0-9]{64}$/i.test(token)){
-        host.innerHTML='<div class="message"><h1>Private link required</h1><p>Open the complete link from your 52 South Rewards email.</p><p><a href="/loyalty/">Return to 52 South Rewards</a></p></div>';
+        host.innerHTML='<div class="message"><h1>Private access required</h1><p>Verify your membership on the 52 South Rewards page to open a new wheel.</p><p><a href="/loyalty/">Return to 52 South Rewards</a></p></div>';
         return;
       }
       const frame=document.createElement('iframe');
