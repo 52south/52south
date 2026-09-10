@@ -97,7 +97,7 @@
           <ul class="loyalty-points"><li>No membership fee or purchase required</li><li>Welcome Wheel for members aged 21+</li><li>Unsubscribe whenever you like</li></ul>
           <figure class="loyalty-join-photo"><img src="/assets/52-south-interior-dining.webp" alt="Warm dining room at 52 South Cafe and Restaurant in Rosetta" width="1200" height="800" loading="lazy"><figcaption>52 Marys Hope Road · Rosetta</figcaption></figure>
         </div>
-        <form class="booking-form loyalty-form" action="https://script.google.com/macros/s/AKfycbymxZXbLhodJ1XmhGSfgvXKavn_S_ANsou_E3l2t2dxdguPboGiJidkAUo_Wke9Cys6sQ/exec" method="POST">
+        <form class="booking-form loyalty-form" action="https://script.google.com/macros/s/AKfycbymxZXbLhodJ1XmhGSfgvXKavn_S_ANsou_E3l2t2dxdguPboGiJidkAUo_Wke9Cys6sQ/exec" method="POST" target="_blank" rel="noopener">
           <input type="hidden" name="form_type" value="membership">
           <input type="hidden" name="membership_source" value="52south.au member benefits page">
           <input type="hidden" name="form_started_at" value="">
@@ -112,7 +112,7 @@
             <label>Date of birth<input name="date_of_birth" type="date" autocomplete="bday" required></label>
           </div>
           <label class="consent"><input name="membership_consent" type="checkbox" value="Yes" required> <span>I confirm I am 21 or older and agree to join 52 South Rewards, receive member offers and news, and follow the <a href="/rewards-terms/" target="_blank">Rewards terms</a>. I can unsubscribe at any time.</span></label>
-          <button class="btn gold booking-submit" type="submit"><span>Create my free membership</span><b aria-hidden="true">→</b></button>
+          <button class="btn gold booking-submit" type="submit"><span>Join &amp; open my wheel</span><b aria-hidden="true">→</b></button>
           <div class="loyalty-trust"><span>Private record</span><span>Duplicate protected</span><span>Secure submission</span></div>
           <p class="notice">One membership and up to two Welcome Wheel spins per week are allowed per person. The allowance resets every Monday in Hobart. We identify existing members using email, the final nine phone digits, or surname and date of birth together. See our <a href="/privacy/">privacy notice</a> and <a href="/rewards-terms/">Rewards terms</a>.</p>
         </form>
@@ -121,17 +121,17 @@
 
     <section class="section loyalty-access" aria-labelledby="wheel-link-title">
       <div class="wrap loyalty-access-grid">
-        <div><div class="eyebrow">Already a member?</div><h2 id="wheel-link-title">Get your private<br>wheel link.</h2><p class="lede">Enter the same details used for your membership. For your protection, we only send the link to the email already stored on your member record.</p><p class="muted">The response will not reveal whether a membership exists. This helps keep member information private.</p></div>
-        <form class="booking-form loyalty-form loyalty-access-form" action="https://script.google.com/macros/s/AKfycbymxZXbLhodJ1XmhGSfgvXKavn_S_ANsou_E3l2t2dxdguPboGiJidkAUo_Wke9Cys6sQ/exec" method="POST">
+        <div><div class="eyebrow">Already a member?</div><h2 id="wheel-link-title">Open your private<br>Welcome Wheel.</h2><p class="lede">Enter the same details used for your membership. After secure verification, your wheel opens immediately in a separate tab.</p><p class="muted">We do not email the private wheel link or place your identity details in its URL. The response will not reveal whether a membership exists.</p></div>
+        <form class="booking-form loyalty-form loyalty-access-form" action="https://script.google.com/macros/s/AKfycbymxZXbLhodJ1XmhGSfgvXKavn_S_ANsou_E3l2t2dxdguPboGiJidkAUo_Wke9Cys6sQ/exec" method="POST" target="_blank" rel="noopener">
           <input type="hidden" name="form_type" value="spin_access"><input type="hidden" name="form_started_at" value=""><input type="text" name="_honey" class="booking-honeypot" tabindex="-1" autocomplete="off">
-          <div class="loyalty-form-heading"><span>Member verification</span><strong>Email my private link</strong><p>All four details must match one active membership.</p></div>
+          <div class="loyalty-form-heading"><span>Member verification</span><strong>Open my Welcome Wheel</strong><p>All four details must match one active membership.</p></div>
           <div class="loyalty-form-fields">
             <label>Surname<input name="surname" autocomplete="family-name" required></label>
             <label>Mobile number<input name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="04XX XXX XXX" required></label>
             <label>Email address<input name="email" type="email" autocomplete="email" required></label>
             <label>Date of birth<input name="date_of_birth" type="date" autocomplete="bday" required></label>
           </div>
-          <button class="btn gold booking-submit" type="submit"><span>Send my private link</span><b aria-hidden="true">→</b></button>
+          <button class="btn gold booking-submit" type="submit"><span>Verify &amp; open wheel</span><b aria-hidden="true">→</b></button>
           <p class="notice">Member details are checked securely and are not placed in the link or analytics. <a href="/rewards-terms/">Conditions apply</a>.</p>
         </form>
       </div>
