@@ -92,6 +92,20 @@ window.southAnalytics={track:southTrack,meta:southMetaTrack,tiktok:southTikTokTr
 const btn=document.querySelector('.menu-toggle');
 const nav=document.querySelector('.navlinks');
 
+// Give every template a keyboard-accessible route to its primary content.
+const southMain=document.querySelector('main')||document.querySelector('section');
+if(southMain){
+  southMain.id=southMain.id||'main-content';
+  if(southMain.tagName!=='MAIN')southMain.setAttribute('role','main');
+  if(!document.querySelector('.skip-link')){
+    const skip=document.createElement('a');
+    skip.className='skip-link';
+    skip.href='#'+southMain.id;
+    skip.textContent='Skip to main content';
+    document.body.insertBefore(skip,document.body.firstChild);
+  }
+}
+
 const southTrackedOutboundClicks=new WeakMap();
 function southTrackOutboundClick(event){
   const link=event.target.closest('a[href]');
@@ -117,9 +131,22 @@ document.addEventListener('pointerdown',southTrackOutboundClick,true);
 document.addEventListener('click',southTrackOutboundClick,true);
 if(btn){
   btn.setAttribute('aria-label','Open navigation');
-  btn.innerHTML='<span class="hamburger-line"></span><span class="hamburger-line"></span><span class="hamburger-line"></span>';
+  btn.setAttribute('aria-expanded','false');
+  btn.setAttribute('aria-controls','site-navigation');
+  btn.innerHTML='<span class="hamburger-line" aria-hidden="true"></span><span class="hamburger-line" aria-hidden="true"></span><span class="hamburger-line" aria-hidden="true"></span>';
 }
-if(btn&&nav){btn.addEventListener('click',()=>{nav.classList.toggle('open');btn.classList.toggle('active',nav.classList.contains('open'));btn.setAttribute('aria-label',nav.classList.contains('open')?'Close navigation':'Open navigation');});}
+if(btn&&nav){
+  nav.id=nav.id||'site-navigation';
+  const setNavigationOpen=open=>{
+    nav.classList.toggle('open',open);
+    btn.classList.toggle('active',open);
+    btn.setAttribute('aria-expanded',String(open));
+    btn.setAttribute('aria-label',open?'Close navigation':'Open navigation');
+  };
+  btn.addEventListener('click',()=>setNavigationOpen(!nav.classList.contains('open')));
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&nav.classList.contains('open')){setNavigationOpen(false);btn.focus();}});
+  document.querySelectorAll('.navlinks a').forEach(a=>a.addEventListener('click',()=>setNavigationOpen(false)));
+}
 if(nav&&!nav.querySelector('a[href="/book-a-table/"]')){const bookingLink=document.createElement('a');bookingLink.href='/book-a-table/';bookingLink.textContent='Book a Table';nav.appendChild(bookingLink);}
 
 document.querySelectorAll('a[href]').forEach(a=>{
@@ -133,8 +160,6 @@ document.querySelectorAll('a[href]').forEach(a=>{
   };
   if(clean[href]) a.setAttribute('href',clean[href]);
 });
-
-document.querySelectorAll('.navlinks a').forEach(a=>a.addEventListener('click',()=>{if(nav)nav.classList.remove('open');if(btn)btn.classList.remove('active');}));
 
 const ASSET_VERSION='6.7';
 document.querySelectorAll('img[src^="assets/"]').forEach(img=>{const base=img.getAttribute('src').split('?')[0];img.setAttribute('src',`${base}?v=${ASSET_VERSION}`);});
@@ -156,15 +181,28 @@ if(footerLast&&!footerLast.querySelector('.cookie-settings-button')){const setti
 if(!document.querySelector('.mobile-contact-bar')){const contactBar=document.createElement('nav');const bookingPage=location.pathname.replace(/\/+$/,'')==='/book-a-table';contactBar.className='mobile-contact-bar';contactBar.setAttribute('aria-label','Quick contact');contactBar.innerHTML=bookingPage?`<a href="tel:+61492144209">Call</a><a href="${WHATSAPP_URL}" target="_blank" rel="noopener">WhatsApp</a><a href="/book-a-table/#reservation-form">Request table</a>`:`<a href="tel:+61492144209">Call</a><a href="${WHATSAPP_URL}" target="_blank" rel="noopener">WhatsApp</a><a href="/book-a-table/">Book</a>`;document.body.appendChild(contactBar);}
 if(!document.getElementById('brand-social-fixes')){const style=document.createElement('style');style.id='brand-social-fixes';style.textContent=`
 .brand img{border-radius:50%!important;overflow:hidden}.brand span{font-size:.92rem;letter-spacing:.035em;text-transform:none}.nav-socials{display:flex;gap:8px;align-items:center}.social-icon{width:34px;height:34px;border:1px solid #3a3a3a;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#f7f5f0}.social-icon svg{width:19px;height:19px}
-.menu-toggle{width:48px;height:48px;padding:0!important;display:inline-flex!important;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:14px;line-height:1;background:rgba(15,15,15,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.hamburger-line{display:block;width:22px;height:2px;border-radius:999px;background:#f6f4ef;transition:transform .25s ease,opacity .2s ease}.menu-toggle.active .hamburger-line:nth-child(1){transform:translateY(7px) rotate(45deg)}.menu-toggle.active .hamburger-line:nth-child(2){opacity:0}.menu-toggle.active .hamburger-line:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.menu-toggle{width:48px;height:48px;padding:0!important;display:none!important;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:14px;line-height:1;background:rgba(15,15,15,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.hamburger-line{display:block;width:22px;height:2px;border-radius:999px;background:#f6f4ef;transition:transform .25s ease,opacity .2s ease}.menu-toggle.active .hamburger-line:nth-child(1){transform:translateY(7px) rotate(45deg)}.menu-toggle.active .hamburger-line:nth-child(2){opacity:0}.menu-toggle.active .hamburger-line:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 .hero .actions{perspective:950px;gap:16px}.hero .actions .btn{position:relative;overflow:hidden;border-radius:16px;padding:15px 24px;transform-style:preserve-3d;box-shadow:0 9px 0 rgba(0,0,0,.34),0 18px 34px rgba(0,0,0,.30),inset 0 1px rgba(255,255,255,.38);transition:transform .22s ease,box-shadow .22s ease,filter .22s ease}.hero .actions .btn:before{content:"";position:absolute;left:8px;right:8px;top:5px;height:42%;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0));pointer-events:none}.hero .actions .btn:hover{transform:translateY(-7px) rotateX(4deg);box-shadow:0 14px 0 rgba(0,0,0,.32),0 28px 44px rgba(0,0,0,.40),inset 0 1px rgba(255,255,255,.45);filter:brightness(1.05)}.hero .actions .btn:active{transform:translateY(2px) scale(.985);box-shadow:0 3px 0 rgba(0,0,0,.32),0 8px 16px rgba(0,0,0,.25)}.hero .actions .btn.primary{background:linear-gradient(145deg,#fff,#dcdcdc);border-color:#fff;color:#111}.hero .actions .btn.gold{background:linear-gradient(145deg,#f1d083,#c79d4e);border-color:#edca77;color:#111}.hero .actions .btn:not(.primary):not(.gold){background:linear-gradient(145deg,rgba(30,30,30,.96),rgba(7,7,7,.98));border-color:rgba(255,255,255,.72);color:#fff;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-@media(max-width:800px){.brand span{font-size:.78rem;line-height:1.15;max-width:175px}.menu-toggle{width:46px;height:46px}.hero .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hero .actions .btn{text-align:center;padding:14px 12px;border-radius:14px;box-shadow:0 7px 0 rgba(0,0,0,.32),0 14px 24px rgba(0,0,0,.28)}.hero .actions .btn:hover{transform:none}.hero .actions .btn:active{transform:translateY(3px) scale(.98);box-shadow:0 3px 0 rgba(0,0,0,.30),0 7px 14px rgba(0,0,0,.22)}}
+@media(max-width:800px){.brand span{font-size:.78rem;line-height:1.15;max-width:175px}.menu-toggle{display:inline-flex!important;width:46px;height:46px}.hero .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hero .actions .btn{text-align:center;padding:14px 12px;border-radius:14px;box-shadow:0 7px 0 rgba(0,0,0,.32),0 14px 24px rgba(0,0,0,.28)}.hero .actions .btn:hover{transform:none}.hero .actions .btn:active{transform:translateY(3px) scale(.98);box-shadow:0 3px 0 rgba(0,0,0,.30),0 7px 14px rgba(0,0,0,.22)}}
 .mobile-contact-bar{display:none}@media(max-width:800px){body{padding-bottom:64px}.mobile-contact-bar{position:fixed;z-index:9999;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);background:#0d0d0d;border-top:1px solid #3a3a3a;box-shadow:0 -8px 24px rgba(0,0,0,.35)}.mobile-contact-bar a{padding:15px 8px;text-align:center;color:#fff;text-decoration:none;font-weight:800;border-right:1px solid #333}.mobile-contact-bar a:last-child{border-right:0;background:#d9c277;color:#111}}
 .cookie-consent{position:fixed;z-index:10050;left:18px;right:18px;bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:24px;max-width:980px;margin:auto;padding:20px 22px;border:1px solid #575047;border-radius:18px;background:rgba(13,13,13,.98);color:#f7f5f0;box-shadow:0 24px 70px rgba(0,0,0,.65);font-family:Arial,sans-serif}.cookie-consent strong{display:block;font-size:1.05rem}.cookie-consent p{max-width:650px;margin:6px 0 0;color:#c9c5bd;font-size:.88rem;line-height:1.5}.cookie-consent a{color:#ead08d}.cookie-actions{display:flex;gap:10px;flex:0 0 auto}.cookie-actions button,.cookie-settings-button{border:1px solid #6a645b;border-radius:10px;background:#171717;color:#fff;padding:11px 14px;font:700 .82rem Arial,sans-serif;cursor:pointer}.cookie-actions .cookie-accept{background:#d9c277;border-color:#d9c277;color:#111}.cookie-settings-button{margin-top:8px;padding:8px 11px;color:#d8d3c9}.cookie-actions button:focus-visible,.cookie-settings-button:focus-visible{outline:3px solid #fff;outline-offset:2px}@media(max-width:720px){.cookie-consent{bottom:76px;display:block;padding:18px}.cookie-actions{display:grid;grid-template-columns:1fr;margin-top:14px}.cookie-actions button{min-height:46px}}
 `;document.head.appendChild(style);}
 
 const homeHero=document.querySelector('.hero');
-if(homeHero&&!document.getElementById('experience-52')){const experience=document.createElement('section');experience.id='experience-52';experience.className='section experience-section';experience.innerHTML=`<div class="wrap"><div class="eyebrow">From our kitchen and dining room</div><h2>Come for the flavour. Stay for the welcome.</h2><p class="lede">A glimpse of the real dishes and relaxed space waiting for you at 52 South.</p><div class="experience-grid"><article class="experience-card wide"><video autoplay muted loop playsinline preload="metadata" poster="assets/52-south-interior-wide.webp"><source src="assets/52-south-venue-best-quality.mp4" type="video/mp4"></video><div><span>Inside 52 South</span><strong>A welcoming table in Rosetta</strong></div></article><article class="experience-card"><img src="assets/sri-lankan-rice-curry-plate.webp" alt="Sri Lankan rice and curry served at 52 South"><div><span>Made here</span><strong>Homestyle Sri Lankan food</strong></div></article><article class="experience-card"><img src="assets/sri-lankan-hoppers-promo.webp" alt="Fresh Sri Lankan hoppers at 52 South"><div><span>Friday and Saturday</span><strong>Fresh hoppers</strong></div></article></div><div class="actions"><a class="btn" href="/gallery/">See the gallery</a><a class="btn gold" href="/book-a-table/">Book a Table</a></div></div></section>`;homeHero.insertAdjacentElement('afterend',experience);}
+if(homeHero&&!document.getElementById('experience-52')){const experience=document.createElement('section');experience.id='experience-52';experience.className='section experience-section';experience.innerHTML=`<div class="wrap"><div class="eyebrow">From our kitchen and dining room</div><h2>Come for the flavour. Stay for the welcome.</h2><p class="lede">A glimpse of the real dishes and relaxed space waiting for you at 52 South.</p><div class="experience-grid"><article class="experience-card wide"><video muted loop playsinline preload="none" poster="assets/52-south-interior-wide.webp" aria-label="Video tour inside 52 South"><source data-src="assets/52-south-venue-best-quality.mp4" type="video/mp4"></video><div><span>Inside 52 South</span><strong>A welcoming table in Rosetta</strong></div></article><article class="experience-card"><img src="assets/sri-lankan-rice-curry-plate.webp" alt="Sri Lankan rice and curry served at 52 South" loading="lazy"><div><span>Made here</span><strong>Homestyle Sri Lankan food</strong></div></article><article class="experience-card"><img src="assets/sri-lankan-hoppers-promo.webp" alt="Fresh Sri Lankan hoppers at 52 South" loading="lazy"><div><span>Friday and Saturday</span><strong>Fresh hoppers</strong></div></article></div><div class="actions"><a class="btn" href="/gallery/">See the gallery</a><a class="btn gold" href="/book-a-table/">Book a Table</a></div></div></section>`;homeHero.insertAdjacentElement('afterend',experience);}
+
+function southLoadVideo(video){
+  const sources=[...video.querySelectorAll('source[data-src]')];
+  if(!sources.length)return;
+  sources.forEach(source=>{source.src=source.dataset.src;source.removeAttribute('data-src');});
+  video.load();
+  video.play().catch(()=>{});
+}
+const southLazyVideos=[...document.querySelectorAll('video source[data-src]')].map(source=>source.parentElement);
+if('IntersectionObserver'in window){
+  const videoObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){southLoadVideo(entry.target);videoObserver.unobserve(entry.target);}}),{threshold:.25});
+  southLazyVideos.forEach(video=>videoObserver.observe(video));
+}else southLazyVideos.forEach(southLoadVideo);
 
 const reviewsSection=document.getElementById('reviews');
 if(reviewsSection&&!document.getElementById('guest-actions')){const guestActions=document.createElement('div');guestActions.id='guest-actions';guestActions.className='guest-actions';guestActions.innerHTML=`<div><strong>Enjoyed your visit?</strong><span>Your feedback helps more Hobart diners find us.</span></div><div class="actions"><a class="btn gold" href="https://www.google.com/maps/search/?api=1&query=52+South+Cafe+and+Restaurant+52+Marys+Hope+Road+Rosetta+TAS+7010" target="_blank" rel="noopener">Leave a Google Review</a><a class="btn" href="/loyalty/">Join 52 South Rewards</a></div>`;reviewsSection.querySelector('.wrap')?.appendChild(guestActions);}
